@@ -12,8 +12,9 @@ const mspfacomponent = {
 
     data: () => ({
         pageRanges: [],
-        bodyClass: '',
+        rangeClass: '',
         baseUrl: BASE_URL,
+        assetsUrl: ASSETS_URL,
     }),
 
     computed: {
@@ -67,13 +68,13 @@ const mspfacomponent = {
             }
         },
 
-        updateBodyClass() {
+        updateRangeClass() {
             const range = this.pageRanges
                 .filter(({from, to}) => this.page >= from && this.page <= to)
                 .map(({from, to}) => from == to ? `p${from}` : `p${from}-${to}`)
                 .join(' ');
 
-            this.bodyClass = `mspfa-body ${range}`;
+            this.rangeClass = range;
         },
 
         updateOverlay() {
@@ -133,9 +134,8 @@ const mspfacomponent = {
             } catch (e) {};
         }
 
-        console.log(ranges);
         this.pageRanges = ranges;
-        this.updateBodyClass();
+        this.updateRangeClass();
 
         this.$refs.mspfa_container.addEventListener('keydown', e => {
             switch (e.code) {
@@ -165,7 +165,7 @@ const mspfacomponent = {
 
     updated() {
         this.setButtonEvents();
-        this.updateBodyClass();
+        this.updateRangeClass();
         this.updateOverlay();
     },
 }
