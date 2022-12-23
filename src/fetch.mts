@@ -75,7 +75,7 @@ export async function fetchFile(
 
         if (mode != 'overwrite' && await fs.pathExists(savePath)) {
             console.log(`${savePath}: file exists - skipping download`);
-            response.body.cancel();
+            response.body?.cancel();
             return savePath;
         }
     }

@@ -1,5 +1,11 @@
 <template>
-<div id="mspfa-body" :class="bodyClass" ref="mspfa_body" tabindex="0">
+<div :class="`mspfa-${story.i}`" tabindex="0" ref="mspfa_container">
+
+<div>
+    <link rel="stylesheet" href="assets://testquest/mspfa.css">
+</div>
+
+<div :class="bodyClass">
 
 <div id="main">
 <header>
@@ -42,22 +48,22 @@
     </tr>
 </table>
 <div id="foot">
-<div id="links">
-    <a v-for="n in pageData.n" :href="baseUrl + n">{{ story.p[n - 1].c.trim() }}</a>
-</div>
-<br>
-<br>
-<div id="prevlinks" style="display: flex">
-<div class="footlinks">
-    <a id="startover" :href="baseUrl + 1">Start Over</a>
-    <span v-if="page > 1"> | <a id="goback" :href="baseUrl + (page - 1)">Go Back</a> </span>
-</div>
-<div class="footlinks" style="margin-left: auto; color: grey;">
-    {{ timestampToISO(pageData.d) }}
-</div>
-</div>
-<br>
-<br>
+    <div id="links">
+        <a v-for="n in pageData.n" :href="baseUrl + n">{{ story.p[n - 1].c.trim() }}</a>
+    </div>
+    <br>
+    <br>
+    <div id="prevlinks" style="display: flex">
+        <div class="footlinks">
+            <a id="startover" :href="baseUrl + 1">Start Over</a>
+            <span v-if="page > 1"> | <a id="goback" :href="baseUrl + (page - 1)">Go Back</a> </span>
+        </div>
+        <div class="footlinks" style="margin-left: auto; color: grey;">
+            {{ timestampToISO(pageData.d) }}
+        </div>
+    </div>
+    <br>
+    <br>
 </div>
 </div>
 <div id="info"></div>
@@ -66,11 +72,9 @@
 <div class="umcontainer">
 <div class="mspfalogo"></div>
 <form id="dialog" style="display: none;">
-<div class="major"></div>
-<div></div>
-<div></div>
+    <div class="major"></div>
+    <div></div>
+    <div></div>
 </form>
-<div ref="style_mount"></div>
-
 </div>
 </template>

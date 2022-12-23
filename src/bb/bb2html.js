@@ -23,6 +23,8 @@ function tokens2html(tokens) {
                 output.push(`<div class="spoiler closed"><div style="text-align: center"><button data-open="${token.properties.open}" data-close=${token.properties.close}>${token.properties.open}</button></div><div>${content}</div></div>`);
             } else if (token.name == "url") {
                 output.push(`<a href="${token.arg}">${content}</a>`);
+            } else {
+                output.push(`<${token.name}>${content}</${token.name}>`);
             }
         } else {
             output.push(token);

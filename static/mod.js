@@ -68,10 +68,12 @@ const mspfacomponent = {
         },
 
         updateBodyClass() {
-            this.bodyClass = this.pageRanges
+            const range = this.pageRanges
                 .filter(({from, to}) => this.page >= from && this.page <= to)
                 .map(({from, to}) => from == to ? `p${from}` : `p${from}-${to}`)
                 .join(' ');
+
+            this.bodyClass = `mspfa-body ${range}`;
         },
 
         updateOverlay() {
@@ -94,43 +96,51 @@ const mspfacomponent = {
     mounted() {
         this.setButtonEvents();
 
-        const css = this.story.y
-            .replace(/@@ASSETS@@/g, ASSETS_URL)
-            .replace(/ ?body/g, '#mspfa-body')
-            .replace(/background-image/g, 'background');
-        const e = document.createElement('style');
-        e.innerHTML = css;
-        this.$refs.style_mount.appendChild(e);
+        let adventureStyle = document.querySelector(`style#style-mspfa-${this.story.i}`);
+        if (adventureStyle == null) {
+            let css = this.story.y
+                .replace(/@@ASSETS@@/g, ASSETS_URL)
+                .replace(/body/g, '.mspfa-body')
+                .replace(/background-image/g, 'background');
+            adventureStyle = document.createElement('style');
+            adventureStyle.innerHTML = css;
+            adventureStyle.id = `style-mspfa-${this.story.i}`;
+            document.head.appendChild(adventureStyle);
+        }
 
         const pageRangeRegex = /p(\d+)-(\d+)/;
         const pageRegex = /p(\d+) /;
         
         const ranges = [];
         for (const sheet of document.styleSheets) {
-            for (const rule of sheet.cssRules) {
-                if (rule instanceof CSSStyleRule) {
-                    let match = rule.selectorText.match(pageRangeRegex)
-                    if (!match) {
-                        match = rule.selectorText.match(pageRegex);
-                    }
-                    if (match) {
-                        const from = Number(match[1]);
-                        const to = Number(match[2] || match[1]);
-                        const prev = ranges[ranges.length - 1];
-                        if (!prev || prev.from != from || prev.to != to) {
-                            ranges.push({ from, to });
+            try {
+                for (const rule of sheet.cssRules) {
+                    if (rule instanceof CSSStyleRule) {
+                        let match = rule.selectorText.match(pageRangeRegex)
+                        if (!match) {
+                            match = rule.selectorText.match(pageRegex);
+                        }
+                        if (match) {
+                            const from = Number(match[1]);
+                            const to = Number(match[2] || match[1]);
+                            const prev = ranges[ranges.length - 1];
+                            if (!prev || prev.from != from || prev.to != to) {
+                                ranges.push({ from, to });
+                            }
                         }
                     }
                 }
-            }
+            } catch (e) {};
         }
+
+        console.log(ranges);
         this.pageRanges = ranges;
         this.updateBodyClass();
 
-        this.$refs.mspfa_body.addEventListener('keydown', e => {
+        this.$refs.mspfa_container.addEventListener('keydown', e => {
             switch (e.code) {
                 case 'Space':
-                    const button = this.$refs.mspfa_body.querySelector('.spoiler button')
+                    const button = this.$refs.mspfa_container.querySelector('.spoiler button')
                     if (button) {
                         button.click();
                     }
@@ -138,13 +148,13 @@ const mspfacomponent = {
                 case 'ArrowRight':
                     if (this.page != this.story.p.length - 1) {
                         this.tab.url = `${BASE_URL}${this.page + 1}`;
-                        this.$refs.mspfa_body.parentElement.scrollTo(0, 0);
+                        this.$refs.mspfa_container.parentElement.scrollTo(0, 0);
                     }
                     break;
                 case 'ArrowLeft':
                     if (this.page != 1) {
                         this.tab.url = `${BASE_URL}${this.page - 1}`;
-                        this.$refs.mspfa_body.parentElement.scrollTo(0, 0);
+                        this.$refs.mspfa_container.parentElement.scrollTo(0, 0);
                     }
                     break;
             }
@@ -201,7 +211,6 @@ module.exports = {
                     component: {
                         ...mspfacomponent,
                         template: api.readFile('./template.vue'),
-                        scss: api.readFile('./mspfa.css')
                     }
                 }
             }

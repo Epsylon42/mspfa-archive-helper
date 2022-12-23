@@ -2,15 +2,29 @@ import * as path from 'path';
 
 import { fs, glob } from 'zx';
 
+import { parse as parseHtml } from 'node-html-parser'
+
 import { fetchFile } from './fetch.mjs'
+import { fixStoryCss, scopeCssFile } from './fixCss.mjs'
 const bb = require('./bb/bbparser');
+
+export const mspfaUrl = 'https://mspfa.com'
+export const assetsDir = 'archive/assets';
+export let storyId = '0';
 
 //////////////////////////////////////////////////////////////////////////////
 
+function extractArg(i: number) {
+    const zeroArgIndex = process.argv.findIndex(arg => arg.includes('index.mjs'));
+    if (zeroArgIndex == -1) {
+        throw new Error('Something went wrong. Could not read command line arguments');
+    }
+
+    return process.argv[zeroArgIndex + i];
+}
+
 async function run() {
-    const mspfaUrl = 'https://mspfa.com'
-    console.log(process.argv)
-    const storyId = process.argv[process.argv.indexOf('index.mjs') + 1];
+    storyId = extractArg(1);
     if (storyId == null) {
         throw new Error('Provide a story id');
     }
@@ -28,6 +42,7 @@ async function run() {
     });
 
     story = await fs.readJson(story);
+    storyId = String(story.i);
 
     async function fixImages() {
         console.log('downloding images');
@@ -39,8 +54,8 @@ async function run() {
                 if (bb.isBB(token)) {
                     const indexStr = imageIndex == 0 ? '' : `_${imageIndex}`;
                     const url = bb.reconstruct(token.content);
-                    const assetUrl = (await fetchFile(url, `archive/assets/images/${page + 1}${indexStr}`))
-                        .replace('archive/assets', '@@ASSETS@@');
+                    const assetUrl = (await fetchFile(url, `${assetsDir}/images/${page + 1}${indexStr}`))
+                        .replace(assetsDir, '@@ASSETS@@');
                     token.content = [assetUrl];
                     imageIndex += 1;
                 }
@@ -50,42 +65,13 @@ async function run() {
         }
     }
 
-    async function fixCss() {
-        console.log('downloading css resources');
-
-        let css = story.y;
-        const urls1 = (css.match(/url\([^"].*\)/g) || [])
-            .map((url: string) => [url, url.substring('url('.length, url.length - ')'.length)]);
-        const urls2 = (css.match(/url\("[^\)]*\)/g) || [])
-            .map((url: string) => [url, url.substring('url("'.length, url.length - '")'.length)]);
-        const urls = urls1.concat(urls2);
-
-        for (let i = 0; i < urls.length; i++) {
-            const [replacementString, urlString] = urls[i];
-            const url = new URL(urlString, mspfaUrl);
-            if (url.pathname.includes('FONT_URL')) {
-                continue;
-            }
-
-            const assetUrl = (await fetchFile(url, 'archive/assets/cssres/', { fallbackName: String(i) }))
-                .replace('archive/assets', '@@ASSETS@@');
-            if (replacementString.startsWith('url("')) {
-                css = css.replace(replacementString, `url("${assetUrl}")`);
-            } else {
-                css = css.replace(replacementString, `url(${assetUrl})`);
-            }
-        }
-
-        story.y = css;
-    }
-
     async function fixOtherLinks() {
         console.log('downloading other resources');
 
         const keys = ["o", "x"];
         for (let i = 0; i < keys.length; i++) {
-            const assetUrl = (await fetchFile(story[keys[i]], 'archive/assets/res/', { fallbackName: String(i) }))
-                .replace('archive/assets', '@@ASSETS@@');
+            const assetUrl = (await fetchFile(story[keys[i]], `${assetsDir}/res/`, { fallbackName: String(i) }))
+                .replace(assetsDir, '@@ASSETS@@');
             story[keys[i]] = assetUrl;
         }
     }
@@ -93,29 +79,30 @@ async function run() {
     async function generateIndex() {
         console.log('generating asset index');
 
-        const index = (await glob('archive/assets/**'))
-            .map(asset => asset.replace('archive/assets/', ''))
+        const index = (await glob(`${assetsDir}/**`))
+            .map(asset => asset.replace(`${assetsDir}/`, ''))
             .join('\n');
 
-        await fs.writeFile('archive/assets/index', index);
+        await fs.writeFile(`${assetsDir}/index`, index);
     }
 
     await fixImages();
-    await fixCss();
+    await fixStoryCss(story);
     await fixOtherLinks();
 
-    await fs.mkdir('archive/assets', { recursive: true });
+    await fs.mkdir(assetsDir, { recursive: true });
     await generateIndex();
 
     await fs.writeFile('archive/story.json', JSON.stringify(story, null, '  '));
 
-    for (const staticFile of await glob('static/*')) {
+    for (const staticFile of await glob('static/**/*')) {
         await fs.copy(
             staticFile,
             path.join('archive/', path.relative('static', staticFile)),
             { recursive: true }
         );
     }
+    await scopeCssFile('archive/assets/mspfa.css');
 
     await fs.copy('src/bb', 'archive/bb', { recursive: true });
 }
