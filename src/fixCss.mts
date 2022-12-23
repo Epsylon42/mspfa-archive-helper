@@ -26,8 +26,8 @@ function collectUrls(node: any) : any[] {
     if ('children' in node && node.children != null) {
         urls = urls.concat(node.children.toArray().flatMap(collectUrls));
     }
-    if ('value' in node) {
-        urls = urls.concat(collectUrls(node.value));
+    for (const key of ['value', 'prelude', 'block']) {
+        urls = urls.concat(collectUrls(node[key]));
     }
 
     return urls;
@@ -37,7 +37,7 @@ async function fixCssRecursive(filePath: string) {
     console.log(`${filePath} is a css file - fixing recursively`);
     try {
         const content = (await fs.readFile(filePath)).toString();
-        const fixed = await fixCssString(content, false);
+        const fixed = await fixCssString(content, { download: false });
         await fs.writeFile(filePath, fixed);
     } catch (e) {
         console.error(`Could not fix ${filePath} - ${e}`)
@@ -61,7 +61,7 @@ function applyCssScope(rule: csst.Rule) {
     }
 }
 
-export async function scopeCssFile(filePath: string) {
+export async function applyCssScopeToFile(filePath: string) {
     const content = (await fs.readFile(filePath)).toString();
     let css: any = csst.parse(content, {
         parseRulePrelude: true,
@@ -73,15 +73,21 @@ export async function scopeCssFile(filePath: string) {
     await fs.writeFile(filePath, csst.generate(css));
 }
 
-export async function fixCssString(cssString: string, download: boolean = true): Promise<string> {
+export async function fixCssString(
+    cssString: string,
+    args: { download?: boolean, context?: string } = {}
+): Promise<string> {
+    let { download = true, context = 'default' } = args;
+
     let css: any = csst.parse(cssString, {
+        context,
         parseRulePrelude: true,
-        parseCustomProperty: false,
+        parseCustomProperty: true,
     });
 
     for (const rule of css.children) {
         if (download) {
-            let values = collectUrls(rule.prelude).concat(collectUrls(rule.block));
+            let values = collectUrls(rule);
 
             for (const value of values) {
                 const filePath = await fixUrl(new URL(value.value, mspfaUrl), String(cssResIndex));

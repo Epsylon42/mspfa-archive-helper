@@ -3,7 +3,7 @@ import { createWriteStream } from 'fs';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
 
-import { glob, fs } from 'zx';
+import { glob, fs, $ } from 'zx';
 import mimedb from 'mime-db';
 
 export async function fetchFile(
@@ -68,7 +68,11 @@ export async function fetchFile(
     const response = await fetch(url.href, args.fetchArg);
 
     if (determineExt) {
-        const ext = mimedb[response.headers.get('content-type').split(';')[0]].extensions[0];
+        let ext;
+        const contentType = response.headers.get('content-type');
+        if (contentType != null && mimedb[contentType] != null) {
+            ext = (mimedb[contentType].extensions || [null])[0];
+        }
         if (ext != null) {
             savePath += '.' + ext;
         }
@@ -84,4 +88,26 @@ export async function fetchFile(
 
     await (promisify(pipeline)(response.body as any, createWriteStream(savePath)));
     return savePath;
+}
+
+export async function fetchYtDlp(url: URL, savePath: string): Promise<string> {
+    let candidates = await glob(`${savePath}.*`);
+    if (candidates.length == 1) {
+        console.log(`${savePath}: file exists - skipping download`);
+        return candidates[0];
+    } else if (candidates.length > 1) {
+        throw new Error('This should not happen'); // TODO: better error message
+    }
+
+    await fs.mkdir(path.dirname(savePath), { recursive: true });
+    await $`yt-dlp ${url.href} -o ${savePath + '.%(ext)s'}`;
+
+    candidates = await glob(`${savePath}.*`);
+    if (candidates.length == 1) {
+        return candidates[0];
+    } else if (candidates.length > 1) {
+        throw new Error('This should not happen');
+    } else {
+        throw new Error('Could not download');
+    }
 }
