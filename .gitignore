@@ -1,4 +1,5 @@
 archive
 tmp
 node_modules
-*.mjs
+build
+

@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "built": "typescript index.mts --target es2022 --moduleResolution nodenext --esModuleInterop",
-    "start": "zx index.mjs"
+    "build": "tsc",
+    "start": "zx build/index.mjs"
   },
   "author": "",
   "license": "ISC",
