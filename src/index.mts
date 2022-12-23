@@ -5,7 +5,7 @@ import { fs, glob } from 'zx';
 import { parse as parseHtml } from 'node-html-parser'
 
 import { fetchFile } from './fetch.mjs'
-import { fixStoryCss, scopeCssFile } from './fixCss.mjs'
+import { fixStoryCss, scopeCssFile, fixCssString } from './fixCss.mjs'
 const bb = require('./bb/bbparser');
 
 export const mspfaUrl = 'https://mspfa.com'
@@ -65,6 +65,24 @@ async function run() {
         }
     }
 
+    async function fixHtml() {
+        console.log('fixing html');
+
+        for (let page = 0; page < story.p.length; page += 1) {
+            const html = parseHtml(story.p[page].b);
+            for (const el of html.querySelectorAll('[src]')) {
+
+            }
+
+            for (const el of html.querySelectorAll('[style]')) {
+                let style = el.getAttribute('style') as string;
+                style = await fixCssString(style);
+                el.setAttribute('style', style);
+                console.log(el);
+            }
+        }
+    }
+
     async function fixOtherLinks() {
         console.log('downloading other resources');
 
@@ -89,6 +107,7 @@ async function run() {
     await fixImages();
     await fixStoryCss(story);
     await fixOtherLinks();
+    //await fixHtml();
 
     await fs.mkdir(assetsDir, { recursive: true });
     await generateIndex();

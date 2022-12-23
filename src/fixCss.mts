@@ -5,6 +5,8 @@ import { fs } from 'zx';
 import { mspfaUrl, assetsDir, storyId } from './index.mjs'
 import { fetchFile } from './fetch.mjs'
 
+let cssResIndex = 0;
+
 async function fixUrl(url: URL, fallbackName: string): Promise<string> {
     if (url.pathname.includes('FONT_URL')) {
         return url.href;
@@ -77,20 +79,19 @@ export async function fixCssString(cssString: string, download: boolean = true):
         parseCustomProperty: false,
     });
 
-    let i = 0;
     for (const rule of css.children) {
         if (download) {
             let values = collectUrls(rule.prelude).concat(collectUrls(rule.block));
 
             for (const value of values) {
-                const filePath = await fixUrl(new URL(value.value, mspfaUrl), String(i));
+                const filePath = await fixUrl(new URL(value.value, mspfaUrl), String(cssResIndex));
                 if (path.extname(filePath) == '.css') {
                     await fixCssRecursive(filePath);
                 }
 
                 const assetUrl = filePath.replace(assetsDir, '@@ASSETS@@');
                 value.value = assetUrl;
-                i += 1;
+                cssResIndex += 1;
             }
         }
 
