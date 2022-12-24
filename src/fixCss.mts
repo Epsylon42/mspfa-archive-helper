@@ -90,13 +90,20 @@ export async function fixCssString(
             let values = collectUrls(rule);
 
             for (const value of values) {
-                const filePath = await fixUrl(new URL(value.value, mspfaUrl), String(cssResIndex));
+                let filePath;
+                try {
+                    filePath = await fixUrl(new URL(value.value, mspfaUrl), String(cssResIndex));
+                    const assetUrl = filePath.replace(assetsDir, '@@ASSETS@@');
+                    value.value = assetUrl;
+                } catch (e) {
+                    console.error(e);
+                    continue;
+                }
+
                 if (path.extname(filePath) == '.css') {
                     await fixCssRecursive(filePath);
                 }
 
-                const assetUrl = filePath.replace(assetsDir, '@@ASSETS@@');
-                value.value = assetUrl;
                 cssResIndex += 1;
             }
         }

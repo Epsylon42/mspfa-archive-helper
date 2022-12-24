@@ -36,7 +36,8 @@
                 </header>
                 <div id="container">
                     <div id="slide">
-                        <div id="command">{{ pageData.c }}</div>
+                        <div id="command" v-if="specialPage != 'log'" v-html="commandHtml"></div>
+                        <div id="command" v-if="specialPage == 'log'">Story Log</div>
                         <div v-if="specialPage != 'log'" id="content" ref="content" v-html="pageHtml"></div>
                         <table v-if="specialPage == 'log'" id="log" ref="content">
                             <tr id="pages">

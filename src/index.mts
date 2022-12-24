@@ -48,20 +48,26 @@ async function run() {
         console.log('downloding images');
 
         for (let page = 0; page < story.p.length; page += 1) {
-            const tokens = bb.parseAll(story.p[page].b, ['img']);
             let imageIndex = 0;
-            for (const token of tokens) {
-                if (bb.isBB(token)) {
-                    const indexStr = imageIndex == 0 ? '' : `_${imageIndex}`;
-                    const url = bb.reconstruct(token.content);
-                    const assetUrl = (await fetchFile(url, `${assetsDir}/images/${page + 1}${indexStr}`))
-                        .replace(assetsDir, '@@ASSETS@@');
-                    token.content = [assetUrl];
-                    imageIndex += 1;
+            for (const key of ['b', 'c']) {
+                const tokens = bb.parseAll(story.p[page][key], ['img']);
+                for (const token of tokens) {
+                    if (bb.isBB(token)) {
+                        const indexStr = imageIndex == 0 ? '' : `_${imageIndex}`;
+                        const url = bb.reconstruct(token.content);
+                        try {
+                            const assetUrl = (await fetchFile(url, `${assetsDir}/images/${page + 1}${indexStr}`))
+                            .replace(assetsDir, '@@ASSETS@@');
+                            token.content = [assetUrl];
+                        } catch (e) {
+                            console.error(e);
+                        }
+                        imageIndex += 1;
+                    }
                 }
-            }
 
-            story.p[page].b = bb.reconstruct(tokens);
+                story.p[page][key] = bb.reconstruct(tokens);
+            }
         }
     }
 
@@ -102,10 +108,14 @@ async function run() {
                         continue;
                     }
                 } else {
-                    assetUrl = (await fetchFile(src, `${assetsDir}/otherres/`, { fallbackName: String(otherResIndex) }))
+                    try {
+                        assetUrl = (await fetchFile(src, `${assetsDir}/otherres/`, { fallbackName: String(otherResIndex) }))
                         .replace(assetsDir, '@@ASSETS@@');
+                        el.setAttribute('src', assetUrl);
+                    } catch (e) {
+                        console.error(e);
+                    }
                     otherResIndex += 1;
-                    el.setAttribute('src', assetUrl);
                 }
             }
 
@@ -124,9 +134,15 @@ async function run() {
 
         const keys = ["o", "x"];
         for (let i = 0; i < keys.length; i++) {
-            const assetUrl = (await fetchFile(story[keys[i]], `${assetsDir}/res/`, { fallbackName: String(i) }))
-                .replace(assetsDir, '@@ASSETS@@');
-            story[keys[i]] = assetUrl;
+            if (story[keys[i]] != '') {
+                try {
+                    const assetUrl = (await fetchFile(story[keys[i]], `${assetsDir}/res/`, { fallbackName: String(i) }))
+                    .replace(assetsDir, '@@ASSETS@@');
+                    story[keys[i]] = assetUrl;
+                } catch (e) {
+                    console.error(e);
+                }
+            }
         }
     }
 
@@ -140,13 +156,20 @@ async function run() {
         await fs.writeFile(`${assetsDir}/index`, index);
     }
 
+    async function generateTitleFile() {
+        const content = `
+        exports.title = ${JSON.stringify(story.n)};
+        `;
+
+        await fs.writeFile('archive/title.js', content);
+    }
+
     await fixImages();
     await fixStoryCss(story);
     await fixOtherLinks();
     await fixHtml();
 
     await fs.mkdir(assetsDir, { recursive: true });
-    await generateIndex();
 
     await fs.writeFile('archive/story.json', JSON.stringify(story, null, '  '));
 
@@ -158,6 +181,8 @@ async function run() {
         );
     }
     await applyCssScopeToFile('archive/assets/mspfa.css');
+    await generateIndex();
+    await generateTitleFile();
 
     await fs.copy('src/bb', 'archive/bb', { recursive: true });
 }

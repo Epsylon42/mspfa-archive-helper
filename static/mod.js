@@ -1,8 +1,8 @@
 const bb = require('./bb/bb2html')
 
-const TITLE = 'TestQuest';
+const TITLE = require('./title.js').title;
 
-const URL_TITLE = TITLE.toLowerCase().replace(/ /g, '-');
+const URL_TITLE = TITLE.toLowerCase().replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
 const BASE_URL = `/${URL_TITLE}/`;
 const ASSETS_URL = `assets://${URL_TITLE}`;
 
@@ -46,6 +46,11 @@ const mspfacomponent = {
             return bb.bb2html(this.pageData.b)
                 .replace(/@@ASSETS@@/g, ASSETS_URL);
         },
+
+        commandHtml() {
+            return bb.bb2html(this.pageData.c)
+                .replace(/@@ASSETS@@/g, ASSETS_URL);
+        }
     },
 
     methods: {
