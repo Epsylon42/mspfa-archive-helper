@@ -1,8 +1,6 @@
 const bb = require('./bb/bb2html')
 
-const TITLE = require('./title.js').title;
-
-const URL_TITLE = TITLE.toLowerCase().replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
+const { title: TITLE, urlTitle: URL_TITLE } = require('./title.js');
 const BASE_URL = `/${URL_TITLE}/`;
 const ASSETS_URL = `assets://${URL_TITLE}`;
 
@@ -18,12 +16,24 @@ const mspfacomponent = {
     }),
 
     computed: {
-        page() {
-            return Number(this.tab.url.substring(`/${URL_TITLE}/`.length));
+        _page() {
+            return this.tab.url.substring(`/${URL_TITLE}/`.length);
         },
 
-        specialPage() {
-            return this.tab.url.substring(`/${URL_TITLE}/`.length);
+        page() {
+            return Number(this._page);
+        },
+
+        isRegularPage() {
+            return !isNaN(this.page);
+        },
+
+        isLogPage() {
+            return this._page == 'log';
+        },
+
+        isInfoPage() {
+            return this._page == 'info';
         },
 
         dataIndex() {
@@ -43,14 +53,21 @@ const mspfacomponent = {
         },
 
         pageHtml() {
-            return bb.bb2html(this.pageData.b)
-                .replace(/@@ASSETS@@/g, ASSETS_URL);
+            return bb.bb2html(this.pageData.b);
         },
 
         commandHtml() {
-            return bb.bb2html(this.pageData.c)
-                .replace(/@@ASSETS@@/g, ASSETS_URL);
-        }
+            return bb.bb2html(this.pageData.c);
+        },
+
+        nextCommands() {
+            return this.pageData.n
+                .map(n => [ n - 1, this.story.p[n - 1].c.trim() ])
+                .map(([n, data]) => ({
+                    href: `${BASE_URL}${n}`,
+                    html: bb.bb2html(data),
+                }));
+        },
     },
 
     methods: {
@@ -105,7 +122,6 @@ const mspfacomponent = {
         let adventureStyle = document.querySelector(`style#style-mspfa-${this.story.i}`);
         if (adventureStyle == null) {
             let css = this.story.y
-                .replace(/@@ASSETS@@/g, ASSETS_URL)
                 .replace(/body/g, '.mspfa-body')
                 .replace(/background-image/g, 'background');
             adventureStyle = document.createElement('style');
@@ -202,7 +218,7 @@ module.exports = {
 
                 archive.tweaks.modHomeRowItems.unshift({
                     href: `${BASE_URL}1`,
-                    thumbsrc: story.o.replace(/@@ASSETS@@/, ASSETS_URL),
+                    thumbsrc: story.o,
                     title: story.n,
                     description: story.r,
                     date: `${timestampToISO(story.d)} - ${timestampToISO(story.u)}`,

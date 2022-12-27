@@ -23,11 +23,13 @@
                         <a :href="baseUrl + 'log'" style="color: #2cff4b;">Log</a>
                         <span class="vbar">|</span>
                         <a style="color: #2cff4b;">Search</a>
+                        <span class="vbar">|</span>
+                        <a :href="baseUrl + 'info'" style="color: #2cff4b;">Info</a>
                         <div class="heart"></div>
                         <a style="color: #fffa36;">My MSPFA</a>
                         <a id="notification" style="display: none;">0</a>
                         <span class="vbar">|</span>
-                        <a href="https://discord.gg/EC5acgG" target="_blank" style="color: #fffa36;">Discord</a>
+                        <a target="_blank" style="color: #fffa36;">Discord</a>
                         <div class="heart"></div>
                         <a style="color: #ffbc3e;">Donate</a>
                         <span class="vbar">|</span>
@@ -36,10 +38,13 @@
                 </header>
                 <div id="container">
                     <div id="slide">
-                        <div id="command" v-if="specialPage != 'log'" v-html="commandHtml"></div>
-                        <div id="command" v-if="specialPage == 'log'">Story Log</div>
-                        <div v-if="specialPage != 'log'" id="content" ref="content" v-html="pageHtml"></div>
-                        <table v-if="specialPage == 'log'" id="log" ref="content">
+
+                        <div id="command" v-if="isRegularPage" v-html="commandHtml"></div>
+                        <div id="command" v-if="isLogPage">Story Log</div>
+
+                        <div v-if="isRegularPage" id="content" ref="content" v-html="pageHtml"></div>
+
+                        <table v-if="isLogPage" id="log" ref="content">
                             <tr id="pages">
                                 <td>
                                     <span v-for="(p, i) in story.p">
@@ -48,9 +53,10 @@
                                 </td>
                             </tr>
                         </table>
+
                         <div id="foot">
                             <div id="links">
-                                <a v-for="n in pageData.n" :href="baseUrl + n">{{ story.p[n - 1].c.trim() }}</a>
+                                <a v-for="next in nextCommands" :href="next.href" v-html="next.html"></a>
                             </div>
                             <br>
                             <br>
@@ -59,7 +65,7 @@
                                     <a id="startover" :href="baseUrl + 1">Start Over</a>
                                     <span v-if="page > 1"> | <a id="goback" :href="baseUrl + (page - 1)">Go Back</a> </span>
                                 </div>
-                                <div class="footlinks" style="margin-left: auto; color: grey;" v-if="specialPage != 'log'">
+                                <div class="footlinks" style="margin-left: auto; color: grey;" v-if="isRegularPage">
                                     {{ timestampToISO(pageData.d) }}
                                 </div>
                             </div>
