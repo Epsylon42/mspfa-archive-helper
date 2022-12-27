@@ -2,14 +2,14 @@ import * as path from 'path';
 import * as csst from 'css-tree';
 import { fs } from 'zx';
 
-import { mspfaUrl, assetsDir, storyId } from './index.mjs'
-import { fetchFile } from './fetch.mjs'
+import { mspfaUrl, assetsDir, storyId, toAssetUrl } from './index.mjs'
+import { fetchFile, FetchResult } from './fetch.mjs'
 
 let cssResIndex = 0;
 
-async function fixUrl(url: URL, fallbackName: string): Promise<string> {
+async function fixUrl(url: URL, fallbackName: string): Promise<FetchResult> {
     if (url.pathname.includes('FONT_URL')) {
-        return url.href;
+        return { path: url.href, downloaded: false };
     }
     return await fetchFile(url, `${assetsDir}/cssres/`, { fallbackName });
 }
@@ -37,7 +37,7 @@ async function fixCssRecursive(filePath: string) {
     console.log(`${filePath} is a css file - fixing recursively`);
     try {
         const content = (await fs.readFile(filePath)).toString();
-        const fixed = await fixCssString(content, { download: false });
+        const fixed = await fixCssString(content);
         await fs.writeFile(filePath, fixed);
     } catch (e) {
         console.error(`Could not fix ${filePath} - ${e}`)
@@ -90,18 +90,18 @@ export async function fixCssString(
             let values = collectUrls(rule);
 
             for (const value of values) {
-                let filePath;
+                let result;
                 try {
-                    filePath = await fixUrl(new URL(value.value, mspfaUrl), String(cssResIndex));
-                    const assetUrl = filePath.replace(assetsDir, '@@ASSETS@@');
+                    result = await fixUrl(new URL(value.value, mspfaUrl), String(cssResIndex));
+                    const assetUrl = toAssetUrl(result);
                     value.value = assetUrl;
                 } catch (e) {
                     console.error(e);
                     continue;
                 }
 
-                if (path.extname(filePath) == '.css') {
-                    await fixCssRecursive(filePath);
+                if (result.downloaded && path.extname(result.path) == '.css') {
+                    await fixCssRecursive(result.path);
                 }
 
                 cssResIndex += 1;

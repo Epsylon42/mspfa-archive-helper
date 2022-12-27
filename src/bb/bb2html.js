@@ -11,7 +11,7 @@ function tokens2html(tokens) {
             else if (token.name == "color") {
                 output.push(`<span style="color: ${token.arg}">${content}</span>`);
             } else if (token.name == "size") {
-                output.push(`<span style="font-size: ${token.arg}">${content}</span>`);
+                output.push(`<span style="font-size: ${token.arg}pt">${content}</span>`);
             } else if (token.name == "img") {
                 if (token.arg != null) {
                     const [width, height] = token.arg.split('x');

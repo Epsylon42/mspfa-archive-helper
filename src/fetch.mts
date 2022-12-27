@@ -6,11 +6,16 @@ import { promisify } from 'util';
 import { glob, fs, $ } from 'zx';
 import mimedb from 'mime-db';
 
+export interface FetchResult {
+    path: string;
+    downloaded: boolean;
+}
+
 export async function fetchFile(
     url: string | URL,
     savePathHint: string,
     args: { mode?: 'sync' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string, stub?: boolean } = {}
-): Promise<string> {
+): Promise<FetchResult> {
     const mode = args.mode || 'sync';
 
     if (!(url instanceof URL)) {
@@ -28,7 +33,7 @@ export async function fetchFile(
         const globCheckExisting = await glob(`${savePath}.*`);
         if (mode != 'overwrite' && globCheckExisting.length == 1) {
             console.log(`${globCheckExisting[0]}: file exists - skipping download`)
-            return globCheckExisting[0];
+            return { path: globCheckExisting[0], downloaded: false };
         }
     } else {
         throw new Error(`Could not determine name for ${url.href}`);
@@ -56,12 +61,12 @@ export async function fetchFile(
 
     if (mode != 'overwrite' && !determineExt && await fs.pathExists(savePath)) {
         console.log(`${savePath}: file exists - skipping download`);
-        return savePath;
+        return { path: savePath, downloaded: false };
     }
 
     if (args.stub) {
         console.log(`${savePath}: DOWNLOAD STUB`);
-        return savePath;
+        return { path: savePath, downloaded: false };
     }
 
     await fs.mkdir(path.dirname(savePath), { recursive: true });
@@ -80,31 +85,46 @@ export async function fetchFile(
         if (mode != 'overwrite' && await fs.pathExists(savePath)) {
             console.log(`${savePath}: file exists - skipping download`);
             response.body?.cancel();
-            return savePath;
+            return { path: savePath, downloaded: false };
         }
     }
 
     console.log(`downloading ${savePath}`);
 
     await (promisify(pipeline)(response.body as any, createWriteStream(savePath)));
-    return savePath;
+    return { path: savePath, downloaded: true };
 }
 
-export async function fetchYtDlp(url: URL, savePath: string): Promise<string> {
+export async function determineYtDownloader(): Promise<'yt-dlp' | 'youtube-dl' | null> {
+    if ((await $`which yt-dlp`).exitCode == 0) {
+        return 'yt-dlp';
+    } else if ((await $`which youtube-dl`).exitCode == 0) {
+        return 'youtube-dl';
+    } else {
+        return null;
+    }
+}
+
+export async function fetchYtDlp(url: URL, savePath: string): Promise<FetchResult> {
+    const downloader = await determineYtDownloader();
+    if (downloader == null) {
+        return { path: url.href, downloaded: false };
+    }
+
     let candidates = await glob(`${savePath}.*`);
     if (candidates.length == 1) {
         console.log(`${savePath}: file exists - skipping download`);
-        return candidates[0];
+        return { path: candidates[0], downloaded: false };
     } else if (candidates.length > 1) {
         throw new Error('This should not happen'); // TODO: better error message
     }
 
     await fs.mkdir(path.dirname(savePath), { recursive: true });
-    await $`yt-dlp ${url.href} -o ${savePath + '.%(ext)s'}`;
+    await $`${downloader} ${url.href} -o ${savePath + '.%(ext)s'}`;
 
     candidates = await glob(`${savePath}.*`);
     if (candidates.length == 1) {
-        return candidates[0];
+        return { path: candidates[0], downloaded: true };
     } else if (candidates.length > 1) {
         throw new Error('This should not happen');
     } else {

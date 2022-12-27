@@ -4,13 +4,19 @@ import { fs, glob } from 'zx';
 
 import { parse as parseHtml, HTMLElement } from 'node-html-parser'
 
-import { fetchFile, fetchYtDlp } from './fetch.mjs'
+import { fetchFile, fetchYtDlp, determineYtDownloader, FetchResult } from './fetch.mjs'
 import { fixStoryCss, applyCssScopeToFile, fixCssString } from './fixCss.mjs'
 const bb = require('./bb/bbparser');
 
 export const mspfaUrl = 'https://mspfa.com'
 export const assetsDir = 'archive/assets';
 export let storyId = '0';
+export let story: any = null;
+
+export function toAssetUrl(s: FetchResult): string {
+    return s.path.replace(assetsDir, `assets://${story.urlTitle}`);
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -29,7 +35,7 @@ async function run() {
         throw new Error('Provide a story id');
     }
 
-    let story: any = await fetchFile(mspfaUrl, 'tmp/story.json', {
+    story = await fetchFile(mspfaUrl, 'tmp/story.json', {
         fetchArg: {
             method: 'POST',
             body: (() => {
@@ -41,8 +47,9 @@ async function run() {
         }
     });
 
-    story = await fs.readJson(story);
+    story = await fs.readJson(story.path);
     storyId = String(story.i);
+    story.urlTitle = story.n.toLowerCase().replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
 
     async function fixImages() {
         console.log('downloding images');
@@ -56,8 +63,7 @@ async function run() {
                         const indexStr = imageIndex == 0 ? '' : `_${imageIndex}`;
                         const url = bb.reconstruct(token.content);
                         try {
-                            const assetUrl = (await fetchFile(url, `${assetsDir}/images/${page + 1}${indexStr}`))
-                            .replace(assetsDir, '@@ASSETS@@');
+                            const assetUrl = toAssetUrl(await fetchFile(url, `${assetsDir}/images/${page + 1}${indexStr}`))
                             token.content = [assetUrl];
                         } catch (e) {
                             console.error(e);
@@ -74,6 +80,10 @@ async function run() {
     async function fixHtml() {
         console.log('fixing html');
 
+        if ((await determineYtDownloader()) == null) {
+            console.error('YouTube downloader not found - YouTube videos, if any, will be skipped');
+        }
+
         let otherResIndex = 0;
         for (let page = 0; page < story.p.length; page += 1) {
             const html = parseHtml(story.p[page].b);
@@ -86,8 +96,7 @@ async function run() {
                 if (el.tagName == 'IFRAME') {
                     if (src.hostname.includes('youtube.com') || src.hostname.includes('youtu.be')) {
                         const indexStr = videoIndex == 0 ? '' : `_${videoIndex}`;
-                        assetUrl = (await fetchYtDlp(src, `${assetsDir}/videos/${page}${indexStr}`))
-                            .replace(assetsDir, '@@ASSETS@@');
+                        assetUrl = toAssetUrl(await fetchYtDlp(src, `${assetsDir}/videos/${page}${indexStr}`));
                         videoIndex += 1;
 
                         const newEl = new HTMLElement('video', {}, '', null, [0, 0]);
@@ -109,8 +118,7 @@ async function run() {
                     }
                 } else {
                     try {
-                        assetUrl = (await fetchFile(src, `${assetsDir}/otherres/`, { fallbackName: String(otherResIndex) }))
-                        .replace(assetsDir, '@@ASSETS@@');
+                        assetUrl = toAssetUrl(await fetchFile(src, `${assetsDir}/otherres/`, { fallbackName: String(otherResIndex) }));
                         el.setAttribute('src', assetUrl);
                     } catch (e) {
                         console.error(e);
@@ -136,8 +144,7 @@ async function run() {
         for (let i = 0; i < keys.length; i++) {
             if (story[keys[i]] != '') {
                 try {
-                    const assetUrl = (await fetchFile(story[keys[i]], `${assetsDir}/res/`, { fallbackName: String(i) }))
-                    .replace(assetsDir, '@@ASSETS@@');
+                    const assetUrl = toAssetUrl(await fetchFile(story[keys[i]], `${assetsDir}/res/`, { fallbackName: String(i) }));
                     story[keys[i]] = assetUrl;
                 } catch (e) {
                     console.error(e);
@@ -159,6 +166,7 @@ async function run() {
     async function generateTitleFile() {
         const content = `
         exports.title = ${JSON.stringify(story.n)};
+        exports.urlTitle = ${JSON.stringify(story.urlTitle)};
         `;
 
         await fs.writeFile('archive/title.js', content);
