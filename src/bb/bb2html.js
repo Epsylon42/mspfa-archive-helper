@@ -1,10 +1,10 @@
 const bb = require('./bbparser');
 
-function tokens2html(tokens) {
+function tokens2html(tokens, toplevel = true) {
     const output = [];
     for (const token of tokens) {
         if (bb.isBB(token)) {
-            const content = tokens2html(token.content);
+            const content = tokens2html(token.content, false);
             if (["b", "i", "u", "center"].includes(token.name)) {
                 output.push(`<${token.name}>${content}</${token.name}>`);
             }
@@ -13,11 +13,12 @@ function tokens2html(tokens) {
             } else if (token.name == "size") {
                 output.push(`<span style="font-size: ${token.arg}pt">${content}</span>`);
             } else if (token.name == "img") {
+                const classname = toplevel ? 'class="major"' : '';
                 if (token.arg != null) {
                     const [width, height] = token.arg.split('x');
-                    output.push(`<img src="${content}" class="major" width="${width}" height=${height}><br>`);
+                    output.push(`<img src="${content}" ${classname} width="${width}" height=${height}><br>`);
                 } else {
-                    output.push(`<img src="${content}">`);
+                    output.push(`<img src="${content}" ${classname}>`);
                 }
             } else if (token.name == "spoiler") {
                 output.push(`<div class="spoiler closed"><div style="text-align: center"><button data-open="${token.properties.open}" data-close=${token.properties.close}>${token.properties.open}</button></div><div>${content}</div></div>`);
