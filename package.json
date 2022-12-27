@@ -1,0 +1,24 @@
+{
+  "name": "mspfa-archive-helper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "built": "typescript index.mts --target es2022 --moduleResolution nodenext --esModuleInterop",
+    "start": "zx index.mjs"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/css": "0.0.33",
+    "@types/mime-db": "^1.43.1",
+    "css": "^3.0.0",
+    "mime-db": "^1.52.0",
+    "node-html-parser": "^6.1.4",
+    "zx": "^7.1.1"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.4"
+  }
+}
