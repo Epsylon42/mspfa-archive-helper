@@ -43,7 +43,11 @@ async function generateTitleFile() {
     exports.urlTitle = ${JSON.stringify(story.urlTitle)};
     `;
 
-    await fs.writeFile('archive/title.js', content);
+    if (!await fs.pathExists('archive/title.js')) {
+        await fs.writeFile('archive/title.js', content);
+    } else {
+        console.log('title file already exists - will not overwrite')
+    }
 }
 
 async function run() {
@@ -66,7 +70,13 @@ async function run() {
 
     story = await fs.readJson(story.path);
     storyId = String(story.i);
-    story.urlTitle = story.n.toLowerCase().replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
+
+    try {
+        story.urlTitle = require('../archive/title.js').urlTitle;
+    } catch (e) {
+        story.urlTitle = story.n.toLowerCase().replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
+    }
+
 
     await fs.mkdir(assetsDir, { recursive: true });
 

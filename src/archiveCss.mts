@@ -11,7 +11,7 @@ async function archiveUrl(url: URL, fallbackName: string): Promise<FetchResult> 
     if (url.pathname.includes('FONT_URL')) {
         return { path: url.href, downloaded: false };
     }
-    return await fetchFile(url, `${assetsDir}/cssres/`, { fallbackName });
+    return await fetchFile(url, `${assetsDir}/cssres/${encodeURIComponent(url.host)}/`, { fallbackName });
 }
 
 function collectUrls(node: any) : any[] {
@@ -36,7 +36,14 @@ function collectUrls(node: any) : any[] {
 async function archiveCssRecursive(filePath: string) {
     console.log(`${filePath} is a css file - downloading recursively`);
     try {
-        const content = (await fs.readFile(filePath)).toString();
+        let content: string;
+        if (await fs.pathExists(`${filePath}.orig`)) {
+            content = (await fs.readFile(`${filePath}.orig`)).toString();
+        } else {
+            content = (await fs.readFile(filePath)).toString();
+            await fs.writeFile(`${filePath}.orig`, content);
+        }
+
         const archived = await archiveCssString(content);
         await fs.writeFile(filePath, archived);
     } catch (e) {
@@ -100,7 +107,7 @@ export async function archiveCssString(
                     continue;
                 }
 
-                if (result.downloaded && path.extname(result.path) == '.css') {
+                if (path.extname(result.path) == '.css') {
                     await archiveCssRecursive(result.path);
                 }
 

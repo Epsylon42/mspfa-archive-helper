@@ -1,15 +1,11 @@
 import { parse as parseHtml, HTMLElement } from 'node-html-parser'
 
 import { toAssetUrl, story, assetsDir, mspfaUrl } from './index.mjs';
-import { fetchFile, fetchYtDlp, determineYtDownloader } from './fetch.mjs';
+import { fetchFile, fetchYtDlp } from './fetch.mjs';
 import { archiveCssString } from './archiveCss.mjs'
 
 export async function archiveHtmlElements() {
     console.log('fixing html');
-
-    if ((await determineYtDownloader()) == null) {
-        console.error('YouTube downloader not found - YouTube videos, if any, will be skipped');
-    }
 
     let otherResIndex = 0;
     for (let page = 0; page < story.p.length; page += 1) {

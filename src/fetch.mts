@@ -29,16 +29,9 @@ export async function fetchFile(
         savePath = path.join(savePathHint, decodeURI(url.pathname));
     } else if (args.fallbackName != null) {
         savePath = path.join(savePathHint, args.fallbackName);
-
-        const globCheckExisting = await glob(`${savePath}.*`);
-        if (mode != 'overwrite' && globCheckExisting.length == 1) {
-            console.log(`${globCheckExisting[0]}: file exists - skipping download`)
-            return { path: globCheckExisting[0], downloaded: false };
-        }
     } else {
         throw new Error(`Could not determine name for ${url.href}`);
     }
-    let determineExt = path.extname(savePath) == '';
 
     //
     // WARNING: a reasonable person would not have two files with the only difference in their
@@ -50,6 +43,16 @@ export async function fetchFile(
     // with spaces in their paths
     //
     savePath = savePath.replace(/ /g, '_');
+
+    const globCheckExisting = await glob(`${savePath}.*`);
+    // globCheckExisting.length is to account for `*.css.orig` files
+    // this might break something and then we'll need a real solution
+    if (mode != 'overwrite' && (globCheckExisting.length == 1 || globCheckExisting.length == 2)) {
+        console.log(`${globCheckExisting[0]}: file exists - skipping download`)
+        return { path: globCheckExisting[0], downloaded: false };
+    }
+
+    let determineExt = path.extname(savePath) == '';
 
     if (determineExt) {
         const urlExt = path.extname(url.pathname);
@@ -75,8 +78,8 @@ export async function fetchFile(
     if (determineExt) {
         let ext;
         const contentType = response.headers.get('content-type');
-        if (contentType != null && mimedb[contentType] != null) {
-            ext = (mimedb[contentType].extensions || [null])[0];
+        if (contentType != null && mimedb[contentType.split(';')[0]] != null) {
+            ext = (mimedb[contentType.split(';')[0]].extensions || [null])[0];
         }
         if (ext != null) {
             savePath += '.' + ext;
@@ -84,7 +87,6 @@ export async function fetchFile(
 
         if (mode != 'overwrite' && await fs.pathExists(savePath)) {
             console.log(`${savePath}: file exists - skipping download`);
-            response.body?.cancel();
             return { path: savePath, downloaded: false };
         }
     }
@@ -95,14 +97,22 @@ export async function fetchFile(
     return { path: savePath, downloaded: true };
 }
 
+type YtDownloader = 'yt-dlp' | 'youtube-dl' | null;
+let ytDownloader: YtDownloader = null;
 export async function determineYtDownloader(): Promise<'yt-dlp' | 'youtube-dl' | null> {
-    if ((await $`which yt-dlp`).exitCode == 0) {
-        return 'yt-dlp';
-    } else if ((await $`which youtube-dl`).exitCode == 0) {
-        return 'youtube-dl';
-    } else {
-        return null;
+    if (ytDownloader == null) {
+        console.log('checking whether a YouTube downloader is present');
+        if ((await $`which yt-dlp`).exitCode == 0) {
+            ytDownloader = 'yt-dlp';
+        } else if ((await $`which youtube-dl`).exitCode == 0) {
+            ytDownloader = 'youtube-dl';
+        } else {
+            console.log('YouTube downloader not found - videos will not be archived')
+            ytDownloader = null;
+        }
     }
+
+    return ytDownloader;
 }
 
 export async function fetchYtDlp(url: URL, savePath: string): Promise<FetchResult> {

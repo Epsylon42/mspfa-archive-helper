@@ -1,11 +1,12 @@
 const bb = require('./bb/bbparser');
 import { toAssetUrl, story, assetsDir } from './index.mjs';
 import { fetchFile } from './fetch.mjs';
+import { runJobs } from './utils.mjs';
 
 export async function archiveStoryImages() {
     console.log('downloding images');
 
-    for (let page = 0; page < story.p.length; page += 1) {
+    const process = async (page: number) => {
         let imageIndex = 0;
         for (const key of ['b', 'c']) {
             const tokens = bb.parseAll(story.p[page][key], ['img']);
@@ -26,6 +27,8 @@ export async function archiveStoryImages() {
             story.p[page][key] = bb.reconstruct(tokens);
         }
     }
+
+    await runJobs(story.p.length, process);
 }
 
 export async function archiveMiscImages() {
