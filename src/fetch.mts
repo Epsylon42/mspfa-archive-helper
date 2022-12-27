@@ -26,7 +26,7 @@ export async function fetchFile(
     if (!savePathHint.endsWith('/')) {
         savePath = savePathHint;
     } else if (!url.pathname.endsWith('/')){
-        savePath = path.join(savePathHint, decodeURI(url.pathname));
+        savePath = path.join(savePathHint, decodeURIComponent(url.pathname));
     } else if (args.fallbackName != null) {
         savePath = path.join(savePathHint, args.fallbackName);
     } else {

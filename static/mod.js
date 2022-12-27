@@ -45,7 +45,7 @@ const mspfacomponent = {
         },
 
         pageData() {
-            if (this.specialPage == 'log') {
+            if (this.isLogPage) {
                 return {};
             } else {
                 return this.story.p[this.dataIndex]
@@ -61,12 +61,16 @@ const mspfacomponent = {
         },
 
         nextCommands() {
-            return this.pageData.n
-                .map(n => [ n - 1, this.story.p[n - 1].c.trim() ])
-                .map(([n, data]) => ({
-                    href: `${BASE_URL}${n}`,
-                    html: bb.bb2html(data),
-                }));
+            if (this.isRegularPage) {
+                return this.pageData.n
+                    .map(n => [ n - 1, this.story.p[n - 1].c.trim() ])
+                    .map(([n, data]) => ({
+                        href: `${BASE_URL}${n}`,
+                        html: bb.bb2html(data),
+                    }));
+            } else {
+                return [];
+            }
         },
     },
 

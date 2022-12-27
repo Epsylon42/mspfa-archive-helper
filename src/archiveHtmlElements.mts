@@ -36,7 +36,7 @@ export async function archiveHtmlElements() {
                     }
                     el.replaceWith(newEl);
                 } else {
-                    console.error(`Found iframe that is not a youtube video on page ${page}. Mirroring them is not supported`);
+                    console.error(`found iframe that is not a youtube video on page ${page} - not supported - skipping`);
                     continue;
                 }
             } else {

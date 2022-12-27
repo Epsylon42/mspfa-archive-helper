@@ -4,7 +4,7 @@ import { fs, glob } from 'zx';
 
 import { fetchFile, FetchResult } from './fetch.mjs'
 import { archiveStoryImages, archiveMiscImages } from './archiveStoryImages.mjs';
-import { archiveStoryCss, applyCssScopeToFile, archiveCssString } from './archiveCss.mjs'
+import { archiveStoryCss, applyCssScopeToFile } from './archiveCss.mjs'
 import { archiveHtmlElements } from './archiveHtmlElements.mjs';
 
 export const mspfaUrl = 'https://mspfa.com'
@@ -56,7 +56,7 @@ async function run() {
         throw new Error('Provide a story id');
     }
 
-    story = await fetchFile(mspfaUrl, 'tmp/story.json', {
+    story = await fetchFile(mspfaUrl, 'archive/story.json.orig', {
         fetchArg: {
             method: 'POST',
             body: (() => {
