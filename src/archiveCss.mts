@@ -7,7 +7,7 @@ import { fetchFile, FetchResult } from './fetch.mjs'
 
 let cssResIndex = 0;
 
-async function fixUrl(url: URL, fallbackName: string): Promise<FetchResult> {
+async function archiveUrl(url: URL, fallbackName: string): Promise<FetchResult> {
     if (url.pathname.includes('FONT_URL')) {
         return { path: url.href, downloaded: false };
     }
@@ -33,14 +33,14 @@ function collectUrls(node: any) : any[] {
     return urls;
 }
 
-async function fixCssRecursive(filePath: string) {
-    console.log(`${filePath} is a css file - fixing recursively`);
+async function archiveCssRecursive(filePath: string) {
+    console.log(`${filePath} is a css file - downloading recursively`);
     try {
         const content = (await fs.readFile(filePath)).toString();
-        const fixed = await fixCssString(content);
-        await fs.writeFile(filePath, fixed);
+        const archived = await archiveCssString(content);
+        await fs.writeFile(filePath, archived);
     } catch (e) {
-        console.error(`Could not fix ${filePath} - ${e}`)
+        console.error(`Could not download ${filePath} - ${e}`)
     }
 }
 
@@ -73,7 +73,7 @@ export async function applyCssScopeToFile(filePath: string) {
     await fs.writeFile(filePath, csst.generate(css));
 }
 
-export async function fixCssString(
+export async function archiveCssString(
     cssString: string,
     args: { download?: boolean, context?: string } = {}
 ): Promise<string> {
@@ -92,7 +92,7 @@ export async function fixCssString(
             for (const value of values) {
                 let result;
                 try {
-                    result = await fixUrl(new URL(value.value, mspfaUrl), String(cssResIndex));
+                    result = await archiveUrl(new URL(value.value, mspfaUrl), String(cssResIndex));
                     const assetUrl = toAssetUrl(result);
                     value.value = assetUrl;
                 } catch (e) {
@@ -101,7 +101,7 @@ export async function fixCssString(
                 }
 
                 if (result.downloaded && path.extname(result.path) == '.css') {
-                    await fixCssRecursive(result.path);
+                    await archiveCssRecursive(result.path);
                 }
 
                 cssResIndex += 1;
@@ -116,8 +116,8 @@ export async function fixCssString(
     return csst.generate(css);
 }
 
-export async function fixStoryCss(story: { y: string }) {
+export async function archiveStoryCss(story: { y: string }) {
     console.log('downloading css resources');
-    story.y = await fixCssString(story.y);
+    story.y = await archiveCssString(story.y);
 }
 

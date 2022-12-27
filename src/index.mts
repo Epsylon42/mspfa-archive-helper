@@ -2,11 +2,10 @@ import * as path from 'path';
 
 import { fs, glob } from 'zx';
 
-import { parse as parseHtml, HTMLElement } from 'node-html-parser'
-
-import { fetchFile, fetchYtDlp, determineYtDownloader, FetchResult } from './fetch.mjs'
-import { fixStoryCss, applyCssScopeToFile, fixCssString } from './fixCss.mjs'
-const bb = require('./bb/bbparser');
+import { fetchFile, FetchResult } from './fetch.mjs'
+import { archiveStoryImages, archiveMiscImages } from './archiveStoryImages.mjs';
+import { archiveStoryCss, applyCssScopeToFile, archiveCssString } from './archiveCss.mjs'
+import { archiveHtmlElements } from './archiveHtmlElements.mjs';
 
 export const mspfaUrl = 'https://mspfa.com'
 export const assetsDir = 'archive/assets';
@@ -17,7 +16,6 @@ export function toAssetUrl(s: FetchResult): string {
     return s.path.replace(assetsDir, `assets://${story.urlTitle}`);
 }
 
-
 //////////////////////////////////////////////////////////////////////////////
 
 function extractArg(i: number) {
@@ -27,6 +25,25 @@ function extractArg(i: number) {
     }
 
     return process.argv[zeroArgIndex + i];
+}
+
+async function generateIndex() {
+    console.log('generating asset index');
+
+    const index = (await glob(`${assetsDir}/**`))
+        .map(asset => asset.replace(`${assetsDir}/`, ''))
+        .join('\n');
+
+    await fs.writeFile(`${assetsDir}/index`, index);
+}
+
+async function generateTitleFile() {
+    const content = `
+    exports.title = ${JSON.stringify(story.n)};
+    exports.urlTitle = ${JSON.stringify(story.urlTitle)};
+    `;
+
+    await fs.writeFile('archive/title.js', content);
 }
 
 async function run() {
@@ -51,135 +68,16 @@ async function run() {
     storyId = String(story.i);
     story.urlTitle = story.n.toLowerCase().replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
 
-    async function fixImages() {
-        console.log('downloding images');
-
-        for (let page = 0; page < story.p.length; page += 1) {
-            let imageIndex = 0;
-            for (const key of ['b', 'c']) {
-                const tokens = bb.parseAll(story.p[page][key], ['img']);
-                for (const token of tokens) {
-                    if (bb.isBB(token)) {
-                        const indexStr = imageIndex == 0 ? '' : `_${imageIndex}`;
-                        const url = bb.reconstruct(token.content);
-                        try {
-                            const assetUrl = toAssetUrl(await fetchFile(url, `${assetsDir}/images/${page + 1}${indexStr}`))
-                            token.content = [assetUrl];
-                        } catch (e) {
-                            console.error(e);
-                        }
-                        imageIndex += 1;
-                    }
-                }
-
-                story.p[page][key] = bb.reconstruct(tokens);
-            }
-        }
-    }
-
-    async function fixHtml() {
-        console.log('fixing html');
-
-        if ((await determineYtDownloader()) == null) {
-            console.error('YouTube downloader not found - YouTube videos, if any, will be skipped');
-        }
-
-        let otherResIndex = 0;
-        for (let page = 0; page < story.p.length; page += 1) {
-            const html = parseHtml(story.p[page].b);
-            let videoIndex = 0;
-
-            for (const el of html.querySelectorAll('[src]')) {
-                const src = new URL(el.getAttribute('src') as string, mspfaUrl);
-
-                let assetUrl;
-                if (el.tagName == 'IFRAME') {
-                    if (src.hostname.includes('youtube.com') || src.hostname.includes('youtu.be')) {
-                        const indexStr = videoIndex == 0 ? '' : `_${videoIndex}`;
-                        assetUrl = toAssetUrl(await fetchYtDlp(src, `${assetsDir}/videos/${page}${indexStr}`));
-                        videoIndex += 1;
-
-                        const newEl = new HTMLElement('video', {}, '', null, [0, 0]);
-                        newEl.classList.add('major');
-                        newEl.setAttribute('src', assetUrl);
-                        newEl.setAttribute('controls', 'controls');
-                        newEl.setAttribute('controlslist', 'nodownload');
-                        newEl.setAttribute('disablepictureinpicture', '');
-                        for (const attrKey of ['width', 'height']) {
-                            const attr = el.getAttribute(attrKey);
-                            if (attr != null) {
-                                newEl.setAttribute(attrKey, attr);
-                            }
-                        }
-                        el.replaceWith(newEl);
-                    } else {
-                        console.error(`Found iframe that is not a youtube video on page ${page}. Mirroring them is not supported`);
-                        continue;
-                    }
-                } else {
-                    try {
-                        assetUrl = toAssetUrl(await fetchFile(src, `${assetsDir}/otherres/`, { fallbackName: String(otherResIndex) }));
-                        el.setAttribute('src', assetUrl);
-                    } catch (e) {
-                        console.error(e);
-                    }
-                    otherResIndex += 1;
-                }
-            }
-
-            for (const el of html.querySelectorAll('[style]')) {
-                let style = el.getAttribute('style') as string;
-                style = await fixCssString(style, { context: 'declarationList' });
-                el.setAttribute('style', style);
-            }
-
-            story.p[page].b = html.toString();
-        }
-    }
-
-    async function fixOtherLinks() {
-        console.log('downloading other resources');
-
-        const keys = ["o", "x"];
-        for (let i = 0; i < keys.length; i++) {
-            if (story[keys[i]] != '') {
-                try {
-                    const assetUrl = toAssetUrl(await fetchFile(story[keys[i]], `${assetsDir}/res/`, { fallbackName: String(i) }));
-                    story[keys[i]] = assetUrl;
-                } catch (e) {
-                    console.error(e);
-                }
-            }
-        }
-    }
-
-    async function generateIndex() {
-        console.log('generating asset index');
-
-        const index = (await glob(`${assetsDir}/**`))
-            .map(asset => asset.replace(`${assetsDir}/`, ''))
-            .join('\n');
-
-        await fs.writeFile(`${assetsDir}/index`, index);
-    }
-
-    async function generateTitleFile() {
-        const content = `
-        exports.title = ${JSON.stringify(story.n)};
-        exports.urlTitle = ${JSON.stringify(story.urlTitle)};
-        `;
-
-        await fs.writeFile('archive/title.js', content);
-    }
-
-    await fixImages();
-    await fixStoryCss(story);
-    await fixOtherLinks();
-    await fixHtml();
-
     await fs.mkdir(assetsDir, { recursive: true });
 
+    await archiveStoryImages();
+    await archiveMiscImages();
+    await archiveStoryCss(story);
+    await archiveHtmlElements();
+
     await fs.writeFile('archive/story.json', JSON.stringify(story, null, '  '));
+
+    console.log('copying static resources');
 
     for (const staticFile of await glob('static/**/*')) {
         await fs.copy(
