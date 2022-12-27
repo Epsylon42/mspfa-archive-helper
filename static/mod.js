@@ -63,7 +63,7 @@ const mspfacomponent = {
         nextCommands() {
             if (this.isRegularPage) {
                 return this.pageData.n
-                    .map(n => [ n - 1, this.story.p[n - 1].c.trim() ])
+                    .map(n => [ n, this.story.p[n - 1].c.trim() ])
                     .map(([n, data]) => ({
                         href: `${BASE_URL}${n}`,
                         html: bb.bb2html(data),

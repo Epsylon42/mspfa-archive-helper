@@ -12,6 +12,47 @@
     padding: 0 5px 5px 5px;
     background-color: #c6c6c6;
 }
+
+#log {
+    padding-bottom: 25px;
+}
+
+#info {
+    display: grid;
+    grid-template-areas:
+        "icon general log"
+        "icon empty   empty"
+        "desc desc    desc";
+    grid-template-columns: 1fr auto auto;
+    padding: 25px 0;
+}
+#info > * {
+    margin: 1em;
+}
+#info > .storyicon {
+    grid-area: icon;
+}
+#info > .general-info {
+    grid-area: general;
+}
+#info > .general-info > .title {
+    font-family: "Press Start 2P";
+}
+#info > .log-link {
+    grid-area: log;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    text-transform: uppercase;
+    font-family: verdana,arial,helvetica,"sans-serif";
+    font-weight: bold;
+}
+#info > .description {
+    grid-area: desc;
+}
+
 nav {
     font-family: "arial";
     font-weight: bold;
@@ -149,12 +190,6 @@ footer {
     background-position: center;
     border-right: 4px solid #b8b8b8;
     background-color: #eeeeee;
-}
-header .mspfalogo {
-    background-image: url("VorkedLarfleeze.gif");
-}
-footer .mspfalogo {
-    /* background-image: url("/images/footer/random.njs"); */
 }
 footer {
     display: flex;

@@ -44,17 +44,32 @@
 
                         <div v-if="isRegularPage" id="content" ref="content" v-html="pageHtml"></div>
 
-                        <table v-if="isLogPage" id="log" ref="content">
-                            <tr id="pages">
-                                <td>
+                        <div v-if="isLogPage" id="log" ref="content">
+                            <div id="pages">
                                     <span v-for="(p, i) in story.p">
                                         {{ timestampToISO(p.d) }} - <a :href="baseUrl + (i + 1)">{{ p.c }}</a><br>
                                     </span>
-                                </td>
-                            </tr>
-                        </table>
+                            </div>
+                        </div>
 
-                        <div id="foot">
+                        <div v-if="isInfoPage" id="info">
+                            <div class="storyicon">
+                                <img :src="story.o" width="150" height="150">
+                            </div>
+                            <div class="general-info">
+                                <div class="title">{{ story.n }}</div>
+                                <div class="author">Author: <a class="authorlink" :href="story.w">{{ story.a }}</a></div>
+                                <div class="tags">
+                                    Tags: <span class="tag" v-for="(tag, i) in story.t">{{ tag + (i < story.t.length - 1 ? ', ' : '') }}</span>
+                                </div>
+                            </div>
+                            <div class="log-link">
+                                <a :href="baseUrl + 'log'">View All Pages</a>
+                            </div>
+                            <div class="description">{{ story.r }}</div>
+                        </div>
+
+                        <div v-if="isRegularPage" id="foot">
                             <div id="links">
                                 <a v-for="next in nextCommands" :href="next.href" v-html="next.html"></a>
                             </div>
@@ -73,17 +88,12 @@
                             <br>
                         </div>
                     </div>
-                    <div id="info"></div>
                 </div>
                 <footer>
-                    <div class="umcontainer">
+                    <!-- This is not, in fact, a header, but the actual header does not exist so we'll put it here -->
+                    <header class="umcontainer">
                         <div class="mspfalogo"></div>
-                        <form id="dialog" style="display: none;">
-                            <div class="major"></div>
-                            <div></div>
-                            <div></div>
-                        </form>
-                    </div>
+                    </header>
                 </footer>
             </div>
         </div>
