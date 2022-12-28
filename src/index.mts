@@ -39,7 +39,7 @@ async function generateIndex() {
 
 async function generateTitleFile() {
     const content = `
-    exports.title = ${JSON.stringify(story.n)};
+    exports.title = ${JSON.stringify('MSPFA: ' + story.n)};
     exports.urlTitle = ${JSON.stringify(story.urlTitle)};
     `;
 
