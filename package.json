@@ -1,15 +1,17 @@
 {
   "name": "mspfa-archive-helper",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Tool for archiving fanventures from mspfa.com ",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "zx build/index.mjs"
   },
-  "author": "",
-  "license": "ISC",
+  "author": {
+    "name": "Epsylon",
+    "email": "eepsylon.3@gmail.com"
+  },
+  "license": "GPL-3.0",
   "dependencies": {
     "@types/css-tree": "^2.0.0",
     "@types/mime-db": "^1.43.1",
