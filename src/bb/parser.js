@@ -177,14 +177,6 @@ class Chain extends RuleHelper {
         this.parsers = [];
     }
 
-    expects() {
-        return 'chain [' +
-            this.parsers
-            .map(p => p.expects())
-            .join(', ') +
-            ']';
-    }
-
     with(parser) {
         this.parsers.push(to_parser(parser));
         if (this.spaces) {
@@ -281,22 +273,6 @@ class Many extends Rule {
         return this;
     }
 
-    expects() {
-        const at_most = () => {
-            if (this.at_most_n == null) {
-                return '';
-            } else {
-                return `and at most ${this.at_most_n} `;
-            }
-        };
-
-        if (!this.parser.hidden) {
-            return `at least ${this.at_least_n} ${at_most()}${this.parser.expects()}`;
-        } else {
-            return '';
-        }
-    }
-
     got_enough(results) {
         return results.length >= this.at_least_n;
     }
@@ -349,14 +325,6 @@ class Either extends RuleHelper {
         super();
 
         this.either = [];
-    }
-
-    expects() {
-        return 'one of (' +
-            this.either
-            .map(p => p.expects())
-            .join(' | ') +
-            ')';
     }
 
     with(parser) {
@@ -441,10 +409,6 @@ class Map extends Rule {
         this.func = func;
     }
 
-    expects() {
-        return this.parser.expects();
-    }
-
     _parse(input) {
         let [result, rest] = this.parser.parse(input);
         return [this.func(result), rest];
@@ -452,11 +416,12 @@ class Map extends Rule {
 }
 
 class Pred extends Rule {
-    constructor(pred, eoi) {
+    constructor(pred, eoi, peek) {
         super();
 
         this.pred = pred;
         this.eoi = eoi;
+        this.peek = peek;
         this.set_expectation('character matching a predicate');
     }
 
@@ -464,7 +429,11 @@ class Pred extends Rule {
         if ((!this.eoi && input.data[0] === undefined) || !this.pred(input.data[0])) {
             this.error(input);
         } else {
-            return [input.data[0], input.split(1).right()];
+            if (this.peek) {
+                return ['', input];
+            } else {
+                return [input.data[0], input.split(1).right()];
+            }
         }
     }
 

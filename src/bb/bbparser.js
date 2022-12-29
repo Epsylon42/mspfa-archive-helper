@@ -15,8 +15,24 @@ function name(names) {
     }
 }
 
-function notspace() {
-    return new Many(new Pred(c => c != ' ' && c != ']'))
+function unquotedValue() {
+    const innerEither = new Either();
+
+    const parens = new Chain()
+        .with('(')
+        .with(new Many(innerEither).map(m => m.join('')))
+        .with(')')
+        .map(m => m.join(''));
+
+    innerEither
+        .with(new Pred(c => ! ['(', ')', ']'].includes(c)))
+        .with(parens);
+
+    return new Many(
+        new Either()
+            .with(parens)
+            .with(new Pred(c => c != ' ' && c != ']'))
+        )
         .map(m => m.join(''));
 }
 
@@ -32,7 +48,7 @@ function openingTagParser(names) {
         .with(
             new Chain()
             .with_hidden('=')
-            .with(notspace())
+            .with(unquotedValue())
             .map(m => m[0])
         );
     }
