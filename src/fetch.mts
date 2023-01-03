@@ -3,7 +3,7 @@ import { createWriteStream } from 'fs';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
 
-import { glob, fs, $ } from 'zx';
+import { $, glob, fs, fetch } from 'zx';
 import mimedb from 'mime-db';
 
 export interface FetchResult {
@@ -14,9 +14,9 @@ export interface FetchResult {
 export async function fetchFile(
     url: string | URL,
     savePathHint: string,
-    args: { mode?: 'sync' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string, stub?: boolean } = {}
+    args: { mode?: 'keep' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string, stub?: boolean } = {}
 ): Promise<FetchResult> {
-    const mode = args.mode || 'sync';
+    const mode = args.mode || 'keep';
 
     if (!(url instanceof URL)) {
         url = new URL(url);
@@ -73,7 +73,7 @@ export async function fetchFile(
     }
 
     await fs.mkdir(path.dirname(savePath), { recursive: true });
-    const response = await fetch(url.href, args.fetchArg);
+    const response = await fetch(url.href, args.fetchArg as any);
 
     if (determineExt) {
         let ext;

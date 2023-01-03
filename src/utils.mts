@@ -1,6 +1,8 @@
-const simultaneousJobs = 4;
+import { argv } from './index.mjs';
 
 export async function runJobs(count: number, process: (i: number) => Promise<void>): Promise<void> {
+    const simultaneousJobs = argv.jobs;
+
     const continuedProcess = async (i: number) => {
         await process(i);
         if ((i + simultaneousJobs) < count) {

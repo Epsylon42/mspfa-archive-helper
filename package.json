@@ -5,7 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "start": "zx build/index.mjs"
+    "start": "node build/index.mjs"
   },
   "author": {
     "name": "Epsylon",
@@ -15,9 +15,11 @@
   "dependencies": {
     "@types/css-tree": "^2.0.0",
     "@types/mime-db": "^1.43.1",
+    "@types/yargs": "^17.0.18",
     "css-tree": "^2.3.1",
     "mime-db": "^1.52.0",
     "node-html-parser": "^6.1.4",
+    "yargs": "^17.6.2",
     "zx": "^7.1.1"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-const bb = require('./bb/bbparser');
+import * as bb from './bb/bbparser.js'
 import { toAssetUrl, story, assetsDir } from './index.mjs';
 import { fetchFile } from './fetch.mjs';
 import { runJobs } from './utils.mjs';
