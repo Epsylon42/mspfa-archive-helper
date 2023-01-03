@@ -8,9 +8,6 @@ import { fetchFile, FetchResult } from './fetch.mjs'
 let cssResIndex = 0;
 
 async function archiveUrl(url: URL, fallbackName: string): Promise<FetchResult> {
-    if (url.pathname.includes('FONT_URL')) {
-        return { path: url.href, downloaded: false };
-    }
     return await fetchFile(url, `${assetsDir}/cssres/${encodeURIComponent(url.host)}/`, { fallbackName });
 }
 
@@ -107,7 +104,7 @@ export async function archiveCssString(
                     continue;
                 }
 
-                if (path.extname(result.path) == '.css') {
+                if (result.path != null && path.extname(result.path) == '.css') {
                     await archiveCssRecursive(result.path);
                 }
 

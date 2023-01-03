@@ -15,10 +15,6 @@ export const assetsDir = 'archive/assets';
 export let storyId: string = '0';
 export let story: any = null;
 
-export function toAssetUrl(s: FetchResult): string {
-    return s.path.replace(assetsDir, `assets://${story.urlTitle}`);
-}
-
 function parseArgs(argv: string[]): yargs.Argv<{}> {
     return yargs.default(hideBin(argv));
 }
@@ -31,19 +27,52 @@ Note the double dash after 'start'`)
     type: 'number',
     description: 'MSPFA story id. If not specified and story.json is already downloaded - will read story id from there',
 })
-.option('jobs', {
-    alias: 'j',
-    type: 'number',
-    description: 'Number of simultaneous download jobs. That many things will be downloaded simultaneously (currentry has effect only for story images)',
-    default: 4,
-})
 .option('updateStory', {
+    alias: 'u',
     type: 'boolean',
     description: 'Download story.json even if it already exists. May be used to download new pages after a fanventure update',
     default: false
 })
+.option('jobs', {
+    alias: 'j',
+    type: 'number',
+    description: 'Number of simultaneous download jobs. That many things will be downloaded simultaneously (currentry has effect only for story images)',
+    default: 1,
+})
+.option('fetchRetries', {
+    type: 'number',
+    description: 'Number of times requests to a server will be retried in case of a failure. Has no effect on YouTube downloading',
+    default: 3
+})
+.option('stopAfterErrors', {
+    type: 'number',
+    description: 'How many errors will cause the archiving process to stop. 0 means continue no matter what. Links that could not be downloaded will not be replaced, so the archive will not be completely offline.',
+    default: 1
+})
+.option('youtubeDownloader', {
+    type: 'string',
+    description: 'Name of a path to executable of a YouTube downloader (must be derived from youtube-dl). By default will try to determine automatically'
+})
 
 export const argv = argvParser.parseSync();
+
+let fetchErrors = 0;
+export function toAssetUrl(s: FetchResult): string {
+    if (s.path != null) {
+        return s.path.replace(assetsDir, `assets://${story.urlTitle}`);
+    } else {
+        if (!s.ignoreError) {
+            fetchErrors += 1;
+        }
+
+        if (argv.stopAfterErrors == 0 || fetchErrors < argv.stopAfterErrors) {
+            return s.originalUrl;
+        } else {
+            console.error('download error limit exceeded - stopping');
+            process.exit(1);
+        }
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////////
 

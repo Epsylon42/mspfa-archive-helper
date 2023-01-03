@@ -1,3 +1,5 @@
+import { argv } from './index.mjs';
+
 import * as path from 'path';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream';
@@ -7,8 +9,10 @@ import { $, glob, fs, fetch } from 'zx';
 import mimedb from 'mime-db';
 
 export interface FetchResult {
-    path: string;
+    originalUrl: string,
+    path?: string;
     downloaded: boolean;
+    ignoreError?: boolean;
 }
 
 export async function fetchFile(
@@ -16,11 +20,40 @@ export async function fetchFile(
     savePathHint: string,
     args: { mode?: 'keep' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string, stub?: boolean } = {}
 ): Promise<FetchResult> {
-    const mode = args.mode || 'keep';
-
     if (!(url instanceof URL)) {
         url = new URL(url);
     }
+
+    let i = 0;
+    while (true) {
+        try {
+            i += 1;
+            return {
+                originalUrl: url.href,
+                ...await fetchInternal(url, savePathHint, args)
+            };
+        } catch (e: any) {
+            if ('httpcode' in e && Math.floor(e.httpcode / 100) == 4) {
+                console.error(`Server returned a ${e.httpcode} code - will not retry`)
+                return { originalUrl: url.href, downloaded: false };
+            }
+
+            if (i <= argv.fetchRetries) {
+                console.log(`${e} - retrying ${i}`);
+            } else {
+                console.error('failed to download');
+                return { originalUrl: url.href, downloaded: false };
+            }
+        }
+    }
+}
+
+async function fetchInternal(
+    url: URL,
+    savePathHint: string,
+    args: { mode?: 'keep' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string, stub?: boolean } = {}
+): Promise<{ path: string, downloaded: boolean }> {
+    const mode = args.mode || 'keep';
 
     let savePath: string;
     if (!savePathHint.endsWith('/')) {
@@ -74,6 +107,11 @@ export async function fetchFile(
 
     await fs.mkdir(path.dirname(savePath), { recursive: true });
     const response = await fetch(url.href, args.fetchArg as any);
+    if (!response.ok) {
+        const e: any = new Error();
+        e.httpcode = response.status;
+        throw e;
+    }
 
     if (determineExt) {
         let ext;
@@ -97,9 +135,13 @@ export async function fetchFile(
     return { path: savePath, downloaded: true };
 }
 
-type YtDownloader = 'yt-dlp' | 'youtube-dl' | null;
+type YtDownloader = 'yt-dlp' | 'youtube-dl' | string | null;
 let ytDownloader: YtDownloader = null;
-export async function determineYtDownloader(): Promise<'yt-dlp' | 'youtube-dl' | null> {
+export async function determineYtDownloader(): Promise<YtDownloader> {
+    if (argv.youtubeDownloader != null) {
+        return argv.youtubeDownloader;
+    }
+
     if (ytDownloader == null) {
         console.log('checking whether a YouTube downloader is present');
         if ((await $`which yt-dlp`).exitCode == 0) {
@@ -116,15 +158,17 @@ export async function determineYtDownloader(): Promise<'yt-dlp' | 'youtube-dl' |
 }
 
 export async function fetchYtDlp(url: URL, savePath: string): Promise<FetchResult> {
+    const originalUrl = url.href;
+
     const downloader = await determineYtDownloader();
     if (downloader == null) {
-        return { path: url.href, downloaded: false };
+        return { originalUrl, downloaded: false, ignoreError: true };
     }
 
     let candidates = await glob(`${savePath}.*`);
     if (candidates.length == 1) {
         console.log(`${savePath}: file exists - skipping download`);
-        return { path: candidates[0], downloaded: false };
+        return { originalUrl, path: candidates[0], downloaded: false };
     } else if (candidates.length > 1) {
         throw new Error('This should not happen'); // TODO: better error message
     }
@@ -134,10 +178,10 @@ export async function fetchYtDlp(url: URL, savePath: string): Promise<FetchResul
 
     candidates = await glob(`${savePath}.*`);
     if (candidates.length == 1) {
-        return { path: candidates[0], downloaded: true };
+        return { originalUrl, path: candidates[0], downloaded: true };
     } else if (candidates.length > 1) {
         throw new Error('This should not happen');
     } else {
-        throw new Error('Could not download');
+        return { originalUrl, downloaded: false }
     }
 }

@@ -40,12 +40,8 @@ export async function archiveHtmlElements() {
                     continue;
                 }
             } else {
-                try {
-                    assetUrl = toAssetUrl(await fetchFile(src, `${assetsDir}/otherres/`, { fallbackName: String(otherResIndex) }));
-                    el.setAttribute('src', assetUrl);
-                } catch (e) {
-                    console.error(e);
-                }
+                assetUrl = toAssetUrl(await fetchFile(src, `${assetsDir}/otherres/`, { fallbackName: String(otherResIndex) }));
+                el.setAttribute('src', assetUrl);
                 otherResIndex += 1;
             }
         }
