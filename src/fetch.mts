@@ -197,14 +197,14 @@ export async function fetchYtDlp(url: URL, savePath: string): Promise<FetchResul
     }
 }
 
-type YtDownloader = 'yt-dlp' | 'youtube-dl' | string | null;
-let ytDownloader: YtDownloader = null;
+type YtDownloader = 'yt-dlp' | 'youtube-dl' | string | null | undefined;
+let ytDownloader: YtDownloader;
 export async function determineYtDownloader(): Promise<YtDownloader> {
     if (argv.youtubeDownloader != null) {
         return argv.youtubeDownloader;
     }
 
-    if (ytDownloader == null) {
+    if (ytDownloader === undefined) {
         console.log('checking whether a YouTube downloader is present');
         if ((await $`which yt-dlp`).exitCode == 0) {
             ytDownloader = 'yt-dlp';
