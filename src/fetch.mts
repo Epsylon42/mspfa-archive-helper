@@ -1,4 +1,4 @@
-import { argv } from './index.mjs';
+import { argv, assetsDir, story } from './index.mjs';
 
 import * as path from 'path';
 import { createWriteStream } from 'fs';
@@ -9,16 +9,28 @@ import { $, glob, fs, fetch } from 'zx';
 import mimedb from 'mime-db';
 
 export interface FetchResult {
+    /// Original url string passed as an argument to fetchFile/fetchYtDlp
     originalUrl: string,
+
+    /// Path to the downloaded file. If none, it means that fetch has failed
     path?: string;
+
+    /// Whether a file was downloaded. False means either download failure or that the requested file is already downloaded
     downloaded: boolean;
+
+    /// If true, stopAfterErrors counter will not be incremented
     ignoreError?: boolean;
 }
 
+///
+/// Downloads from an url into a file.
+/// This function is an error handling wrapper for fetchInternal, which will retry several times in case of an error.
+/// See fetchInternal for further docs
+///
 export async function fetchFile(
     url: string | URL,
     savePathHint: string,
-    args: { mode?: 'keep' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string, stub?: boolean } = {}
+    args: { mode?: 'keep' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string } = {}
 ): Promise<FetchResult> {
     if (!(url instanceof URL)) {
         url = new URL(url);
@@ -33,6 +45,8 @@ export async function fetchFile(
                 ...await fetchInternal(url, savePathHint, args)
             };
         } catch (e: any) {
+            // Check for 4XX http code.
+            // That means client error so we probably won't get anywhere by repeating the same request
             if ('httpcode' in e && Math.floor(e.httpcode / 100) == 4) {
                 console.error(`Server returned a ${e.httpcode} code - will not retry`)
                 return { originalUrl: url.href, downloaded: false };
@@ -48,10 +62,30 @@ export async function fetchFile(
     }
 }
 
+///
+/// This horrifying thing downloads data from an url into a file.
+///
+/// savePathHint: Hints where the file should be saved
+///     * If it is a file path with an extension, file will be saved exactly there.
+///     * If it is a file path without an extension, extension will be determined automatically
+///       (from url or from mime type)
+///     * If it ends with a slash, it will be treated as a directory path. File name will be determined from url.
+///       If the file name cannot be determined, args.fallbackName will be used
+///
+/// args.mode:
+///     * keep - if a file already exists, will skip downloading and return its path instead
+///     * overwrite - will download no matter what
+///
+/// args.fetchArg: Will be passed directly to fetch. Request method and such
+///
+/// args.fallbackName: Fallback name for the file in case its name cannot be determined. See savePathHint
+///
+/// All spaces in paths will be replaced with underscores because spaces cause *problems*
+///
 async function fetchInternal(
     url: URL,
     savePathHint: string,
-    args: { mode?: 'keep' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string, stub?: boolean } = {}
+    args: { mode?: 'keep' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string } = {}
 ): Promise<{ path: string, downloaded: boolean }> {
     const mode = args.mode || 'keep';
 
@@ -100,11 +134,6 @@ async function fetchInternal(
         return { path: savePath, downloaded: false };
     }
 
-    if (args.stub) {
-        console.log(`${savePath}: DOWNLOAD STUB`);
-        return { path: savePath, downloaded: false };
-    }
-
     await fs.mkdir(path.dirname(savePath), { recursive: true });
     const response = await fetch(url.href, args.fetchArg as any);
     if (!response.ok) {
@@ -135,28 +164,10 @@ async function fetchInternal(
     return { path: savePath, downloaded: true };
 }
 
-type YtDownloader = 'yt-dlp' | 'youtube-dl' | string | null;
-let ytDownloader: YtDownloader = null;
-export async function determineYtDownloader(): Promise<YtDownloader> {
-    if (argv.youtubeDownloader != null) {
-        return argv.youtubeDownloader;
-    }
-
-    if (ytDownloader == null) {
-        console.log('checking whether a YouTube downloader is present');
-        if ((await $`which yt-dlp`).exitCode == 0) {
-            ytDownloader = 'yt-dlp';
-        } else if ((await $`which youtube-dl`).exitCode == 0) {
-            ytDownloader = 'youtube-dl';
-        } else {
-            console.log('YouTube downloader not found - videos will not be archived')
-            ytDownloader = null;
-        }
-    }
-
-    return ytDownloader;
-}
-
+///
+/// Similar to fetchFile, but for YouTube videos.
+/// It's not required to be as versatile so it's simpler. savePath is assumed to be just a page number or a page number with a video index in case there's multiple on a single page
+///
 export async function fetchYtDlp(url: URL, savePath: string): Promise<FetchResult> {
     const originalUrl = url.href;
 
@@ -183,5 +194,49 @@ export async function fetchYtDlp(url: URL, savePath: string): Promise<FetchResul
         throw new Error('This should not happen');
     } else {
         return { originalUrl, downloaded: false }
+    }
+}
+
+type YtDownloader = 'yt-dlp' | 'youtube-dl' | string | null;
+let ytDownloader: YtDownloader = null;
+export async function determineYtDownloader(): Promise<YtDownloader> {
+    if (argv.youtubeDownloader != null) {
+        return argv.youtubeDownloader;
+    }
+
+    if (ytDownloader == null) {
+        console.log('checking whether a YouTube downloader is present');
+        if ((await $`which yt-dlp`).exitCode == 0) {
+            ytDownloader = 'yt-dlp';
+        } else if ((await $`which youtube-dl`).exitCode == 0) {
+            ytDownloader = 'youtube-dl';
+        } else {
+            console.log('YouTube downloader not found - videos will not be archived')
+            ytDownloader = null;
+        }
+    }
+
+    return ytDownloader;
+}
+
+///
+/// Converts fetch result into an asset url for the UHC.
+/// Also does error counting
+///
+let fetchErrors = 0;
+export function toAssetUrl(s: FetchResult): string {
+    if (s.path != null) {
+        return s.path.replace(assetsDir, `assets://${story.urlTitle}`);
+    } else {
+        if (!s.ignoreError) {
+            fetchErrors += 1;
+        }
+
+        if (argv.stopAfterErrors == 0 || fetchErrors < argv.stopAfterErrors) {
+            return s.originalUrl;
+        } else {
+            console.error('download error limit exceeded - stopping');
+            process.exit(1);
+        }
     }
 }

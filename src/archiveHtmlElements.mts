@@ -1,9 +1,15 @@
 import { parse as parseHtml, HTMLElement } from 'node-html-parser'
 
-import { toAssetUrl, story, assetsDir, mspfaUrl } from './index.mjs';
-import { fetchFile, fetchYtDlp } from './fetch.mjs';
+import { story, assetsDir, mspfaUrl } from './index.mjs';
+import { fetchFile, fetchYtDlp, toAssetUrl } from './fetch.mjs';
 import { archiveCssString } from './archiveCss.mjs'
 
+///
+/// Traverses the pages, parses html and downloads things:
+///     * elements with 'src' attribute
+///     * YouTube iframes
+///     * URLs from inline css
+///
 export async function archiveHtmlElements() {
     console.log('fixing html');
 

@@ -5,15 +5,15 @@ import { fs, glob } from 'zx';
 import * as yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
-import { fetchFile, FetchResult } from './fetch.mjs'
+import { fetchFile } from './fetch.mjs'
 import { archiveStoryImages, archiveMiscImages } from './archiveStoryImages.mjs';
 import { archiveStoryCss, applyCssScopeToFile } from './archiveCss.mjs'
 import { archiveHtmlElements } from './archiveHtmlElements.mjs';
 
 export const mspfaUrl = 'https://mspfa.com'
 export const assetsDir = 'archive/assets';
-export let storyId: string = '0';
-export let story: any = null;
+export let storyId: string;
+export let story: any;
 
 function parseArgs(argv: string[]): yargs.Argv<{}> {
     return yargs.default(hideBin(argv));
@@ -56,24 +56,6 @@ Note the double dash after 'start'`)
 
 export const argv = argvParser.parseSync();
 
-let fetchErrors = 0;
-export function toAssetUrl(s: FetchResult): string {
-    if (s.path != null) {
-        return s.path.replace(assetsDir, `assets://${story.urlTitle}`);
-    } else {
-        if (!s.ignoreError) {
-            fetchErrors += 1;
-        }
-
-        if (argv.stopAfterErrors == 0 || fetchErrors < argv.stopAfterErrors) {
-            return s.originalUrl;
-        } else {
-            console.error('download error limit exceeded - stopping');
-            process.exit(1);
-        }
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
 async function run() {
@@ -103,12 +85,15 @@ async function run() {
     story = await fs.readJson(story.path);
     storyId = String(story.i);
 
+    //
+    // If the archive already exists, take url title from there, because a user might want to change it.
+    // Otherwise, generate it from the story name
+    //
     try {
         story.urlTitle = require('../archive/title.js').urlTitle;
     } catch (e) {
         story.urlTitle = story.n.toLowerCase().replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
     }
-
 
     await fs.mkdir(assetsDir, { recursive: true });
 
@@ -135,6 +120,11 @@ async function run() {
     await fs.copy('src/bb', 'archive/bb', { recursive: true });
 }
 
+///
+/// Save all asset file paths to an index file,
+/// which is used to generate asset routes when loading the archive into UHC. (see makeRoutes in static/mod.js)
+/// This might not actually be necessary, but it's probably fine
+///
 async function generateIndex() {
     console.log('generating asset index');
 

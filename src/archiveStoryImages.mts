@@ -1,8 +1,11 @@
 import * as bb from './bb/bbparser.js'
-import { toAssetUrl, story, assetsDir } from './index.mjs';
-import { fetchFile } from './fetch.mjs';
+import { story, assetsDir } from './index.mjs';
+import { fetchFile, toAssetUrl } from './fetch.mjs';
 import { runJobs } from './utils.mjs';
 
+///
+/// Traverses the pages and downloads images
+///
 export async function archiveStoryImages() {
     console.log('downloding images');
 
@@ -31,6 +34,9 @@ export async function archiveStoryImages() {
     await runJobs(story.p.length, process);
 }
 
+///
+/// Downloads fanventure preview and header/footer image
+///
 export async function archiveMiscImages() {
     console.log('downloading miscellaneous images');
 
