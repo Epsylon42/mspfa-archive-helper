@@ -6,7 +6,15 @@ Tool to archive fanventures from [mspfa.com](https://mspfa.com) and package them
 
     npm install
     npm run build
-    npm start <story-id>
+
+Then
+    npm start -- --story <story-id>
+
+Or
+    npm start -- --help
+for the full description
+
+The double dash after `start` is ugly, but it does not seem possible to allow skipping it, at least with `npm`
 
 Run it only when current directory is the repository root. I have not tested otherwise and Do Not Know how it will behave.
 
@@ -18,7 +26,7 @@ Run it only when current directory is the repository root. I have not tested oth
 * Videos hosted on YouTube (if `yt-dlp` or `youtube-dl` are present)
 * HTML elements with `src="..."` (`embed`, `video`, `audio`, `img`, etc)
 * Incremental updates
-    * Files are not downloaded if the tool determines that it's already present. If you know some files have changed - delete them and run the tool again. (Same goes for `story.json.orig` - deleting it will download the new pages, if any)
+    * Files are not downloaded if the tool determines that it's already present. If you know some files have changed - delete them and run the tool again
 
 ### Things that it does not (currently?) handle
 
@@ -34,8 +42,6 @@ Run it only when current directory is the repository root. I have not tested oth
 
 ## TODOs:
 
-* Add documentation
-* Add a more usable command line interface
 * Implement all bbcodes (surely there must be a list of them somewhere)
 * Some images on MSPFA have `class="major"` which makes them take up the whole width of the slide. As far as I can tell, it's not specified in bbcodes, nor anywhere else. Figure out what's up with that
 * MSPFA uses classes like `p<x>-<y>` to apply styles on a per-page basis. Additionaly, some fanventures specify something like `@pagegroup <name> <x1>-<y1> <x2>-<y2> ...` in their custom css, which adds `<name>` along with `p<x>-<y>` to the list of classes. Support that. (e.g. 47866)
@@ -44,4 +50,3 @@ Run it only when current directory is the repository root. I have not tested oth
 * The tool uses a bespoke parser for bbcodes. If there is a library that actually returns the AST, and does not just spit out HTML, it might be better to use it.
 * Find and convert links of the format `mspfa.com?s=<story>&p=<page>`, at least for cases where `<story>` equals the current story id
     * Maybe also links to `homestuck.com` and `mspaintadventures.com`
-* Update `fetchFile` to retry a few times in case of a failure. Also, check HTTP status codes - there have been a few cases where sites responded with `5XX`, which the tool happily accepted
