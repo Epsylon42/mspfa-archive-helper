@@ -111,7 +111,6 @@ const mspfacomponent = {
         if (adventureStyle == null) {
             let css = this.story.y
                 .replace(/body/g, '.mspfa-body')
-                .replace(/background-image/g, 'background');
             adventureStyle = document.createElement('style');
             adventureStyle.innerHTML = css;
             adventureStyle.id = `style-mspfa-${this.story.i}`;
