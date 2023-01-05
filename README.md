@@ -8,10 +8,13 @@ Tool to archive fanventures from [mspfa.com](https://mspfa.com) and package them
     npm run build
 
 Then
+
     npm start -- --story <story-id>
 
 Or
+
     npm start -- --help
+
 for the full description
 
 The double dash after `start` is ugly, but it does not seem possible to allow skipping it, at least with `npm`
