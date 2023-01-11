@@ -60,6 +60,16 @@ export function parseAll(input: string, names?: string[]): Token[] {
         }
     };
 
+    const findCorrespondingOpeningIndex = (closing: string) => {
+        for (let i = bbTokenStack.length - 1; i > 0; i--) {
+            if (closing.toLowerCase() == `/${bbTokenStack[i].name.toLowerCase()}`) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
     const traverse = traverseDepthFirst(ptokens);
     let traverseRet = traverse.next();
     while (!traverseRet.done) {
@@ -67,7 +77,13 @@ export function parseAll(input: string, names?: string[]): Token[] {
         tokenBranch: if (ptoken.type == 'tree' && ptoken.surround == '[]') {
             if (ptoken.inner.length == 1 && 
                 ptoken.inner[0].type == 'string' && 
-                ptoken.inner[0].data == `/${bbTokenStackTop().name}`) {
+                ptoken.inner[0].data.startsWith('/')) {
+
+                const openingIndex = findCorrespondingOpeningIndex(ptoken.inner[0].data);
+                if (openingIndex == -1) {
+                    break tokenBranch;
+                }
+                bbTokenStack.splice(openingIndex + 1);
 
                 addStrToken(ptoken.outerSpan.start);
                 const newToken = bbTokenStack.pop() as BBToken;
@@ -76,6 +92,9 @@ export function parseAll(input: string, names?: string[]): Token[] {
 
                 addStrToken(newToken.outerSpan.start);
                 bbTokenStackTop().content.push(newToken);
+
+                traverseRet = traverse.next('skipChildren');
+                continue;
             } else {
                 const opening = parseBBOpening(ptoken, names);
                 if (opening == null) {
@@ -95,10 +114,10 @@ export function parseAll(input: string, names?: string[]): Token[] {
                         end: -1,
                     },
                 });
-            }
 
-            traverseRet = traverse.next('skipChildren');
-            continue;
+                traverseRet = traverse.next('skipChildren');
+                continue;
+            }
         }
 
         traverseRet = traverse.next();
@@ -127,9 +146,6 @@ interface BBOpening {
 function parseBBOpening(input: PTreeToken & { type: 'tree' }, names?: string[]): BBOpening | null {
     const firstChild = input.inner[0];
     if (firstChild == null || firstChild.type != 'string') {
-        return null;
-    }
-    if (names != null && !names.includes(firstChild.data)) {
         return null;
     }
 
@@ -175,7 +191,10 @@ function parseBBOpening(input: PTreeToken & { type: 'tree' }, names?: string[]):
             return [ key, value ];
         });
 
-    if (pairs.length > 0 && Array.from(pairs[0][0]).every(c => c.match(/^[a-zA-Z0-0_\-]$/))) {
+    if (pairs.length > 0 && 
+        Array.from(pairs[0][0]).every(c => c.match(/^[a-zA-Z0-0_\-]$/)) &&
+        (!names || names.includes(pairs[0][0].toLowerCase()))
+       ) {
         return {
             name: pairs[0][0],
             arg: pairs[0][1] || undefined,

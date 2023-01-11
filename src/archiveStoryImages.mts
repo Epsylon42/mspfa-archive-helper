@@ -12,7 +12,6 @@ export async function archiveStoryImages() {
     const process = async (page: number) => {
         let imageIndex = 0;
         for (const key of ['b', 'c']) {
-            console.log(story.p[page][key], '\n\n');
             const tokens = bb.parseAll(story.p[page][key], ['img']);
             for (const token of tokens) {
                 if (bb.isBB(token)) {
