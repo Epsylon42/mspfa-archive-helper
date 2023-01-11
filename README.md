@@ -53,3 +53,4 @@ Run it only when current directory is the repository root. I have not tested oth
 * The tool uses a bespoke parser for bbcodes. If there is a library that actually returns the AST, and does not just spit out HTML, it might be better to use it.
 * Find and convert links of the format `mspfa.com?s=<story>&p=<page>`, at least for cases where `<story>` equals the current story id
     * Maybe also links to `homestuck.com` and `mspaintadventures.com`
+* fetchFile should correctly process relative links when downloading recursively (which might involve domains other than mspfa.com)

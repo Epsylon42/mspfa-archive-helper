@@ -1,4 +1,4 @@
-import { argv, assetsDir, story } from './index.mjs';
+import { argv, assetsDir, story, mspfaUrl } from './index.mjs';
 
 import * as path from 'path';
 import { createWriteStream } from 'fs';
@@ -33,7 +33,7 @@ export async function fetchFile(
     args: { mode?: 'keep' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string } = {}
 ): Promise<FetchResult> {
     if (!(url instanceof URL)) {
-        url = new URL(url);
+        url = new URL(url, mspfaUrl); // FIXME: `mspfaUrl` might be incorrect in some situations. fetchFile should accept default domain name as an argument
     }
 
     let i = 0;
