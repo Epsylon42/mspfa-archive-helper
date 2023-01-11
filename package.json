@@ -4,7 +4,7 @@
   "description": "Tool for archiving fanventures from mspfa.com ",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
+    "build": "tsc && rollup -c",
     "start": "node build/index.mjs"
   },
   "author": {
@@ -19,10 +19,13 @@
     "css-tree": "^2.3.1",
     "mime-db": "^1.52.0",
     "node-html-parser": "^6.1.4",
+    "paren-tree-parser": "github:Epsylon42/paren-tree-parser",
+    "rollup": "^3.9.1",
     "yargs": "^17.6.2",
     "zx": "^7.1.1"
   },
   "devDependencies": {
+    "rollup-plugin-node-resolve": "^5.2.0",
     "typescript": "^4.9.4"
   }
 }

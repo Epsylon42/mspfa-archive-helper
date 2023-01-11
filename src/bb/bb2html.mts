@@ -1,6 +1,7 @@
-const bb = require('./bbparser');
+import * as bb from './bbparser.mjs';
+import { Token } from './bbparser.mjs';
 
-function tokens2html(tokens, toplevel = true) {
+function tokens2html(tokens: Token[], toplevel: boolean = true): string {
     const output = [];
     for (const token of tokens) {
         if (bb.isBB(token)) {
@@ -35,9 +36,7 @@ function tokens2html(tokens, toplevel = true) {
     return output.join('').replace(/\n/g, "<br>");
 }
 
-function bb2html(data) {
+export function bb2html(data: string): string {
     const tokens = bb.parseAll(data);
     return tokens2html(tokens);
 }
-
-exports.bb2html = bb2html

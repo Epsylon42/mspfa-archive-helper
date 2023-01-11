@@ -117,7 +117,7 @@ async function run() {
     await generateIndex();
     await generateTitleFile();
 
-    await fs.copy('src/bb', 'archive/bb', { recursive: true });
+    await fs.copy('build/static/bb.js', 'archive/bb.js');
 }
 
 ///

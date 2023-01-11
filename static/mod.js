@@ -1,4 +1,4 @@
-const bb = require('./bb/bb2html')
+const bb = require('./bb.js')
 
 const { title: TITLE, urlTitle: URL_TITLE } = require('./title.js');
 const BASE_URL = `/${URL_TITLE}/`;
