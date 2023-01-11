@@ -10,7 +10,11 @@ function tokens2html(tokens: Token[], toplevel: boolean = true): string {
                 output.push(`<${token.name}>${content}</${token.name}>`);
             }
             else if (token.name == "color") {
-                output.push(`<span style="color: ${token.arg}">${content}</span>`);
+                let color = token.arg;
+                if (!isNaN(Number(color))) {
+                    color = `#${color}`;
+                }
+                output.push(`<span style="color: ${color}">${content}</span>`);
             } else if (token.name == "size") {
                 output.push(`<span style="font-size: ${token.arg}pt">${content}</span>`);
             } else if (token.name == "img") {
