@@ -102,6 +102,8 @@ async function run() {
     await archiveStoryCss(story);
     await archiveHtmlElements();
 
+    await fetchFile(`${mspfaUrl}/images/candyheart.png`, 'archive/assets/candyheart.png');
+
     await fs.writeFile('archive/story.json', JSON.stringify(story, null, '  '));
 
     console.log('copying static resources');
