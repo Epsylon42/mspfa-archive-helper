@@ -21,6 +21,7 @@
     "node-html-parser": "^6.1.4",
     "paren-tree-parser": "github:Epsylon42/paren-tree-parser",
     "yargs": "^17.6.2",
+    "youtube-dl-exec": "^2.4.2",
     "zx": "^7.1.1"
   },
   "devDependencies": {
