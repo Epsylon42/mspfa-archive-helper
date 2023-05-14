@@ -1,5 +1,7 @@
 import * as path from 'path';
 
+import * as ytdlexec from 'youtube-dl-exec';
+
 import { fs, glob } from 'zx';
 
 import * as yargs from 'yargs';
@@ -17,6 +19,8 @@ export const mspfaUrl = 'https://mspfa.com'
 export const assetsDir = 'archive/assets';
 export let storyId: string;
 export let story: any;
+
+export let youtubedl = ytdlexec.default;
 
 function parseArgs(argv: string[]): yargs.Argv<{}> {
     return yargs.default(hideBin(argv));
@@ -59,7 +63,7 @@ Note the double dash after 'start'`)
 })
 .option('youtubeDownloader', {
     type: 'string',
-    description: 'Name of a path to executable of a YouTube downloader (must be derived from youtube-dl). By default will try to determine automatically'
+    description: 'Name of a path to executable of a YouTube downloader (must be derived from youtube-dl). By default will use builtin from youtube-dl-exec'
 })
 
 export const argv = argvParser.parseSync();
@@ -75,6 +79,10 @@ async function run() {
 
     if (argv.ignoreErrors) {
         argv.stopAfterErrors = 0;
+    }
+
+    if (argv.youtubeDownloader != null) {
+        youtubedl = ytdlexec.create(argv.youtubeDownloader) as any;
     }
 
     if (argv.updateStory && argv.story == null) {

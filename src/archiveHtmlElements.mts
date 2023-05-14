@@ -1,7 +1,7 @@
 import { parse as parseHtml, HTMLElement } from 'node-html-parser'
 
 import { story, assetsDir, mspfaUrl } from './index.mjs';
-import { fetchFile, fetchYtDlp, toAssetUrl } from './fetch.mjs';
+import { fetchFile, fetchYoutube, toAssetUrl } from './fetch.mjs';
 import { archiveCssString } from './archiveCss.mjs'
 
 ///
@@ -24,8 +24,9 @@ export async function archiveHtmlElements() {
             let assetUrl;
             if (el.tagName == 'IFRAME') {
                 if (src.hostname.includes('youtube.com') || src.hostname.includes('youtu.be')) {
+                    console.log(`downloading video for page ${page} from ${src.href}`);
                     const indexStr = videoIndex == 0 ? '' : `_${videoIndex}`;
-                    assetUrl = toAssetUrl(await fetchYtDlp(src, `${assetsDir}/videos/${page}${indexStr}`));
+                    assetUrl = toAssetUrl(await fetchYoutube(src, `${assetsDir}/videos/${page}${indexStr}`));
                     videoIndex += 1;
 
                     const newEl = new HTMLElement('video', {}, '', null, [0, 0]);

@@ -21,12 +21,14 @@ The double dash after `start` is ugly, but it does not seem possible to allow sk
 
 Run it only when current directory is the repository root. I have not tested otherwise and Do Not Know how it will behave.
 
+mspfa-archive-helper uses [microlinkhq/youtube-dl-exec](https://github.com/microlinkhq/youtube-dl-exec), which automatically downloads yt-dlp. If you don't want that, check their [section about environment variables](https://github.com/microlinkhq/youtube-dl-exec#environment-variables) before running `npm install`.
+
 ### Non-Obvious things that it does handle
 
 * Custom CSS, including CSS imports and per-page styles.
     * (Mostly. See TODOs)
 * CSS is scoped so it does not fuck up the other UHC tabs when loaded
-* Videos hosted on YouTube (if `yt-dlp` or `youtube-dl` are present)
+* Videos hosted on YouTube
 * HTML elements with `src="..."` (`embed`, `video`, `audio`, `img`, etc)
 * Incremental updates
     * Files are not downloaded if the tool determines that it's already present. If you know some files have changed - delete them and run the tool again

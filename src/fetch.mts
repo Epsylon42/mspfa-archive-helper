@@ -1,4 +1,4 @@
-import { argv, assetsDir, story, mspfaUrl } from './index.mjs';
+import { argv, assetsDir, story, mspfaUrl, youtubedl } from './index.mjs';
 
 import * as path from 'path';
 import { createWriteStream } from 'fs';
@@ -9,7 +9,7 @@ import { $, glob, fs, fetch } from 'zx';
 import mimedb from 'mime-db';
 
 export interface FetchResult {
-    /// Original url string passed as an argument to fetchFile/fetchYtDlp
+    /// Original url string passed as an argument to fetchFile/fetchYoutube
     originalUrl: string,
 
     /// Path to the downloaded file. If none, it means that fetch has failed
@@ -32,6 +32,10 @@ export async function fetchFile(
     savePathHint: string,
     args: { mode?: 'keep' | 'overwrite', fetchArg?: RequestInit, fallbackName?: string } = {}
 ): Promise<FetchResult> {
+    return fetchRetry(url, url => fetchInternal(url, savePathHint, args));
+}
+
+async function fetchRetry(url: string | URL, inner: (url: URL) => Promise<{ path: string, downloaded: boolean }>): Promise<FetchResult> {
     if (!(url instanceof URL)) {
         url = new URL(url, mspfaUrl); // FIXME: `mspfaUrl` might be incorrect in some situations. fetchFile should accept default domain name as an argument
     }
@@ -42,7 +46,7 @@ export async function fetchFile(
             i += 1;
             return {
                 originalUrl: url.href,
-                ...await fetchInternal(url, savePathHint, args)
+                ...await inner(url)
             };
         } catch (e: any) {
             // Check for 4XX http code.
@@ -55,7 +59,7 @@ export async function fetchFile(
             if (i <= argv.fetchRetries) {
                 console.log(`${e} - retrying ${i}`);
             } else {
-                console.error('failed to download');
+                console.error(`failed to download: ${e}`);
                 return { originalUrl: url.href, downloaded: false };
             }
         }
@@ -168,55 +172,28 @@ async function fetchInternal(
 /// Similar to fetchFile, but for YouTube videos.
 /// It's not required to be as versatile so it's simpler. savePath is assumed to be just a page number or a page number with a video index in case there's multiple on a single page
 ///
-export async function fetchYtDlp(url: URL, savePath: string): Promise<FetchResult> {
+export async function fetchYoutube(url: URL, savePath: string): Promise<FetchResult> {
     const originalUrl = url.href;
-
-    const downloader = await determineYtDownloader();
-    if (downloader == null) {
-        return { originalUrl, downloaded: false, ignoreError: true };
-    }
 
     let candidates = await glob(`${savePath}.*`);
     if (candidates.length == 1) {
         console.log(`${savePath}: file exists - skipping download`);
         return { originalUrl, path: candidates[0], downloaded: false };
-    } else if (candidates.length > 1) {
-        throw new Error('This should not happen'); // TODO: better error message
     }
-
     await fs.mkdir(path.dirname(savePath), { recursive: true });
-    await $`${downloader} ${url.href} -o ${savePath + '.%(ext)s'}`;
+
+    await youtubedl.exec(url.href, {
+        output: savePath + '.%(ext)s',
+    }, { stdout: 'inherit' });
 
     candidates = await glob(`${savePath}.*`);
     if (candidates.length == 1) {
         return { originalUrl, path: candidates[0], downloaded: true };
     } else if (candidates.length > 1) {
-        throw new Error('This should not happen');
+        throw new Error('Found multiple candidates when searching for downloaded video. This should not happen, and is probably a bug');
     } else {
         return { originalUrl, downloaded: false }
     }
-}
-
-type YtDownloader = 'yt-dlp' | 'youtube-dl' | string | null | undefined;
-let ytDownloader: YtDownloader;
-export async function determineYtDownloader(): Promise<YtDownloader> {
-    if (argv.youtubeDownloader != null) {
-        return argv.youtubeDownloader;
-    }
-
-    if (ytDownloader === undefined) {
-        console.log('checking whether a YouTube downloader is present');
-        if ((await $`which yt-dlp`).exitCode == 0) {
-            ytDownloader = 'yt-dlp';
-        } else if ((await $`which youtube-dl`).exitCode == 0) {
-            ytDownloader = 'youtube-dl';
-        } else {
-            console.log('YouTube downloader not found - videos will not be archived')
-            ytDownloader = null;
-        }
-    }
-
-    return ytDownloader;
 }
 
 ///
