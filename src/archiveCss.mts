@@ -38,6 +38,7 @@ export async function archiveCssString(
                     result = await archiveUrl(new URL(value.value, mspfaUrl), String(cssResIndex));
                     const assetUrl = toAssetUrl(result);
                     value.value = assetUrl;
+                    cssResIndex += 1;
                 } catch (e) {
                     console.error(e);
                     continue;
@@ -46,8 +47,6 @@ export async function archiveCssString(
                 if (result.path != null && path.extname(result.path) == '.css') {
                     await archiveCssRecursive(result.path);
                 }
-
-                cssResIndex += 1;
             }
         }
 
