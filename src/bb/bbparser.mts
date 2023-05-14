@@ -21,7 +21,7 @@ export function isBB(obj: Token): obj is BBToken {
 }
 
 export function parseAll(input: string, names?: string[]): Token[] {
-    const ptokens = TokenizerChain.new(input)
+    const treeTokens = TokenizerChain.new(input)
         .tokenize('[')
         .tokenize('(', '{')
         .traverse(parenTreeParser.separateStringLiterals)
@@ -70,25 +70,25 @@ export function parseAll(input: string, names?: string[]): Token[] {
         return -1;
     }
 
-    const traverse = traverseDepthFirst(ptokens);
+    const traverse = traverseDepthFirst(treeTokens);
     let traverseRet = traverse.next();
     while (!traverseRet.done) {
-        const ptoken = traverseRet.value;
-        tokenBranch: if (ptoken.type == 'tree' && ptoken.surround == '[]') {
-            if (ptoken.inner.length == 1 && 
-                ptoken.inner[0].type == 'string' && 
-                ptoken.inner[0].data.startsWith('/')) {
+        const treeToken = traverseRet.value;
+        tokenBranch: if (treeToken.type == 'tree' && treeToken.surround == '[]') {
+            if (treeToken.inner.length == 1 && 
+                treeToken.inner[0].type == 'string' && 
+                treeToken.inner[0].data.startsWith('/')) {
 
-                const openingIndex = findCorrespondingOpeningIndex(ptoken.inner[0].data);
+                const openingIndex = findCorrespondingOpeningIndex(treeToken.inner[0].data);
                 if (openingIndex == -1) {
                     break tokenBranch;
                 }
                 bbTokenStack.splice(openingIndex + 1);
 
-                addStrToken(ptoken.outerSpan.start);
+                addStrToken(treeToken.outerSpan.start);
                 const newToken = bbTokenStack.pop() as BBToken;
-                newToken.outerSpan.end = ptoken.outerSpan.end;
-                newToken.innerSpan.end = ptoken.outerSpan.start;
+                newToken.outerSpan.end = treeToken.outerSpan.end;
+                newToken.innerSpan.end = treeToken.outerSpan.start;
 
                 addStrToken(newToken.outerSpan.start);
                 bbTokenStackTop().content.push(newToken);
@@ -96,7 +96,7 @@ export function parseAll(input: string, names?: string[]): Token[] {
                 traverseRet = traverse.next('skipChildren');
                 continue;
             } else {
-                const opening = parseBBOpening(ptoken, names);
+                const opening = parseBBOpening(treeToken, names);
                 if (opening == null) {
                     break tokenBranch;
                 }
@@ -125,12 +125,12 @@ export function parseAll(input: string, names?: string[]): Token[] {
 
     addStrToken(input.length);
 
+    // convert tags without closing back into text
     while (bbTokenStack.length > 1) {
-        bbTokenStackTop().outerSpan.end = input.length;
-        bbTokenStackTop().outerSpan.end = input.length;
-
+        const originalOpening = input.slice(bbTokenStackTop().outerSpan.start, bbTokenStackTop().innerSpan.start);
         const token = bbTokenStack.pop() as BBToken;
-        bbTokenStackTop().content.push(token);
+
+        bbTokenStackTop().content.push(originalOpening, ...token.content);
     }
 
     return bbTokenStackTop().content;
@@ -242,3 +242,5 @@ export function reconstruct(tokens: Token[]): string {
 
     return output
 }
+
+// TODO: add unit tests
