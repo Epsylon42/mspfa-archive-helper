@@ -117,32 +117,35 @@ const mspfacomponent = {
             document.head.appendChild(adventureStyle);
         }
 
+        const pageRangeRegexAll = /p(\d+)-(\d+)/g;
+        const pageRegexAll = /p(\d+) /g;
         const pageRangeRegex = /p(\d+)-(\d+)/;
         const pageRegex = /p(\d+) /;
         
-        const ranges = [];
+        const ranges = new Map();
         for (const sheet of document.styleSheets) {
             try {
                 for (const rule of sheet.cssRules) {
                     if (rule instanceof CSSStyleRule) {
-                        let match = rule.selectorText.match(pageRangeRegex)
-                        if (!match) {
-                            match = rule.selectorText.match(pageRegex);
-                        }
-                        if (match) {
-                            const from = Number(match[1]);
-                            const to = Number(match[2] || match[1]);
-                            const prev = ranges[ranges.length - 1];
-                            if (!prev || prev.from != from || prev.to != to) {
-                                ranges.push({ from, to });
+                        const rangesInSelector = (rule.selectorText.match(pageRangeRegexAll) || [])
+                                          .concat(rule.selectorText.match(pageRegexAll) || []);
+                        for (const range of rangesInSelector) {
+                            let match = range.match(pageRangeRegex)
+                            if (!match) {
+                                match = range.match(pageRegex);
+                            }
+                            if (match) {
+                                const from = Number(match[1]);
+                                const to = Number(match[2] || match[1]);
+                                ranges.set(`${from}-${to}`, { from, to });
                             }
                         }
                     }
                 }
-            } catch (e) {};
+            } catch (e) { throw e; };
         }
 
-        this.pageRanges = ranges;
+        this.pageRanges = Array.from(ranges.values());
         this.updateRangeClass();
 
         this.$refs.mspfa_container.addEventListener('keydown', e => {

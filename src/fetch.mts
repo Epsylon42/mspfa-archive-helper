@@ -235,7 +235,8 @@ export function toAssetUrl(s: FetchResult): string {
         if (argv.stopAfterErrors == 0 || fetchErrors < argv.stopAfterErrors) {
             return s.originalUrl;
         } else {
-            console.error('download error limit exceeded - stopping');
+            // TODO: Maybe handle 404 errors separately. They are unlikely to go away, so there is no reason to stop
+            console.error(`download error limit (${argv.stopAfterErrors}) exceeded - stopping (consider using '--ignoreErrors' or '--stopAfterErrors <N>')`);
             process.exit(1);
         }
     }

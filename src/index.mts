@@ -10,6 +10,9 @@ import { archiveStoryImages, archiveMiscImages } from './archiveStoryImages.mjs'
 import { archiveStoryCss, applyCssScopeToFile } from './archiveCss.mjs'
 import { archiveHtmlElements } from './archiveHtmlElements.mjs';
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 export const mspfaUrl = 'https://mspfa.com'
 export const assetsDir = 'archive/assets';
 export let storyId: string;
@@ -49,6 +52,11 @@ Note the double dash after 'start'`)
     description: 'How many errors will cause the archiving process to stop. 0 means continue no matter what. Links that could not be downloaded will not be replaced, so the archive will not be completely offline.',
     default: 1
 })
+.option('ignoreErrors', {
+    type: 'boolean',
+    description: 'Same as --stopAfterErrors 0',
+    default: false
+})
 .option('youtubeDownloader', {
     type: 'string',
     description: 'Name of a path to executable of a YouTube downloader (must be derived from youtube-dl). By default will try to determine automatically'
@@ -65,9 +73,14 @@ async function run() {
         process.exit(1);
     }
 
+    if (argv.ignoreErrors) {
+        argv.stopAfterErrors = 0;
+    }
+
     if (argv.updateStory && argv.story == null) {
         argv.story = Number((await fs.readJson('archive/story.json.orig')).i);
     }
+
 
     story = await fetchFile(mspfaUrl, 'archive/story.json.orig', {
         mode: argv.updateStory ? 'overwrite' : 'keep',
