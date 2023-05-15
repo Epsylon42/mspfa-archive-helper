@@ -14,9 +14,9 @@ export async function archiveHtmlElements() {
     console.log('fixing html');
 
     let otherResIndex = 0;
-    for (let page = 0; page < story.p.length; page += 1) {
-        const html = parseHtml(story.p[page].b);
-        let videoIndex = 0;
+    for (let page = 1; page <= story.p.length; page += 1) {
+        const html = parseHtml(story.p[page - 1].b);
+        let videoIndex = 1;
 
         for (const el of html.querySelectorAll('[src]')) {
             const src = new URL(el.getAttribute('src') as string, mspfaUrl);
@@ -59,6 +59,6 @@ export async function archiveHtmlElements() {
             el.setAttribute('style', style);
         }
 
-        story.p[page].b = html.toString();
+        story.p[page - 1].b = html.toString();
     }
 }
