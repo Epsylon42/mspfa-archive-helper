@@ -7,6 +7,7 @@ import { promisify } from 'util';
 
 import { $, glob, fs, fetch } from 'zx';
 import mimedb from 'mime-db';
+import pathSanitizer from 'path-sanitizer';
 
 export interface FetchResult {
     /// Original url string passed as an argument to fetchFile/fetchYoutube
@@ -104,6 +105,8 @@ async function fetchInternal(
         throw new Error(`Could not determine name for ${url.href}`);
     }
 
+    savePath = sanitize(savePath);
+
     //
     // WARNING: a reasonable person would not have two files with the only difference in their
     // names being spaces replaced with underscores. But in cases where a fanventure was written
@@ -174,6 +177,7 @@ async function fetchInternal(
 ///
 export async function fetchYoutube(url: URL, savePath: string): Promise<FetchResult> {
     const originalUrl = url.href;
+    savePath = sanitize(savePath);
 
     let candidates = await glob(`${savePath}.*`);
     if (candidates.length == 1) {
@@ -217,4 +221,8 @@ export function toAssetUrl(s: FetchResult): string {
             process.exit(1);
         }
     }
+}
+
+function sanitize(path: string): string {
+    return pathSanitizer(path) || '_';
 }
