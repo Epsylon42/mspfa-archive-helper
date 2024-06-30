@@ -63,6 +63,7 @@ const mspfacomponent = {
         nextCommands() {
             if (this.isRegularPage) {
                 return this.pageData.n
+                    .filter(n => this.story.p[n - 1] != null)
                     .map(n => [ n, this.story.p[n - 1].c.trim() ])
                     .map(([n, data]) => ({
                         href: `${BASE_URL}${n}`,
