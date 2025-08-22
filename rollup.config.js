@@ -1,4 +1,4 @@
-const nodeResolve = require('rollup-plugin-node-resolve');
+const { nodeResolve } = require('@rollup/plugin-node-resolve');
 
 exports.default = {
     input: './build/bb/bb2html.mjs',

@@ -224,5 +224,34 @@ export function toAssetUrl(s: FetchResult): string {
 }
 
 function sanitize(path: string): string {
-    return pathSanitizer(path) || '_';
+    try {
+        // path-sanitizer had a breaking change in v3: export shape may differ.
+        if (typeof (pathSanitizer as any) === 'function') {
+            return (pathSanitizer as any)(path) || '_';
+        }
+
+        // named export style: { sanitize: fn }
+        if (pathSanitizer && typeof (pathSanitizer as any).sanitize === 'function') {
+            return (pathSanitizer as any).sanitize(path) || '_';
+        }
+
+        // default property (commonjs interop)
+        if (pathSanitizer && typeof (pathSanitizer as any).default === 'function') {
+            return (pathSanitizer as any).default(path) || '_';
+        }
+
+        if (pathSanitizer && (pathSanitizer as any).default && typeof (pathSanitizer as any).default.sanitize === 'function') {
+            return (pathSanitizer as any).default.sanitize(path) || '_';
+        }
+    } catch (e) {
+        // fallthrough to fallback
+    }
+
+    // Fallback: conservative sanitization if the library API is incompatible.
+    // Keep ASCII letters, digits, dot, dash, underscore and slashes; replace others with underscore.
+    try {
+        return String(path).replace(/[^a-zA-Z0-9._\-\/\\]/g, '_') || '_';
+    } catch (e) {
+        return '_';
+    }
 }
