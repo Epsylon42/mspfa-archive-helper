@@ -16,7 +16,8 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 export const mspfaUrl = 'https://mspfa.com'
-export const assetsDir = 'archive/assets';
+export let archiveDir: string;
+export let assetsDir: string;
 export let storyId: string;
 export let story: any;
 
@@ -71,11 +72,23 @@ export const argv = argvParser.parseSync();
 //////////////////////////////////////////////////////////////////////////////
 
 async function run() {
-    if (!argv.story && !fs.pathExistsSync('archive/story.json.orig')) {
-        console.error('Specify a story id\n');
-        argvParser.showHelp();
-        process.exit(1);
+    // Determine story ID first
+    let requestedStoryId: number | undefined = argv.story;
+    
+    // If no story specified, try to get it from existing archive
+    if (!requestedStoryId) {
+        const defaultPath = 'archive/story.json.orig';
+        if (fs.pathExistsSync(defaultPath)) {
+            requestedStoryId = Number((await fs.readJson(defaultPath)).i);
+        } else {
+            console.error('Specify a story id\n');
+            argvParser.showHelp();
+            process.exit(1);
+        }
     }
+
+    // Create temporary path based on the requested story ID
+    let tempStoryPath = `temp_story_${requestedStoryId}.json.orig`;
 
     if (argv.ignoreErrors) {
         argv.stopAfterErrors = 0;
@@ -86,11 +99,16 @@ async function run() {
     }
 
     if (argv.updateStory && argv.story == null) {
-        argv.story = Number((await fs.readJson('archive/story.json.orig')).i);
+        argv.story = requestedStoryId;
     }
 
+    // Ensure we have a story ID
+    if (!argv.story) {
+        argv.story = requestedStoryId;
+    }
 
-    story = await fetchFile(mspfaUrl, 'archive/story.json.orig', {
+    // Fetch story metadata to determine archive directory name
+    story = await fetchFile(mspfaUrl, tempStoryPath, {
         mode: argv.updateStory ? 'overwrite' : 'keep',
         fetchArg: {
             method: 'POST',
@@ -106,41 +124,58 @@ async function run() {
     story = await fs.readJson(story.path);
     storyId = String(story.i);
 
+    // Generate sanitized story name for directory
+    const sanitizedStoryName = story.n.replace(/[^a-zA-Z0-9_\-\s]/g, '').replace(/\s+/g, '_').trim();
+    archiveDir = sanitizedStoryName || `story_${storyId}`;
+    assetsDir = `${archiveDir}/assets`;
+
     //
     // If the archive already exists, take url title from there, because a user might want to change it.
     // Otherwise, generate it from the story name
     //
     try {
-        story.urlTitle = require('../archive/title.js').urlTitle;
+        story.urlTitle = require(`../${archiveDir}/title.js`).urlTitle;
     } catch (e) {
         story.urlTitle = story.n.toLowerCase().replace(/ /g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
     }
 
     await fs.mkdir(assetsDir, { recursive: true });
 
+    // Move temporary story file to final location and clean up temp file
+    const finalStoryPath = `${archiveDir}/story.json.orig`;
+    if (tempStoryPath !== finalStoryPath) {
+        await fs.copy(tempStoryPath, finalStoryPath);
+        await fs.remove(tempStoryPath).catch(() => {}); // Remove temp file
+        
+        // Also clean up old archive file if it exists and is different
+        if (fs.pathExistsSync('archive/story.json.orig') && archiveDir !== 'archive') {
+            console.log('Note: Old archive directory still exists. You may want to remove it manually.');
+        }
+    }
+
     await archiveStoryImages();
     await archiveMiscImages();
     await archiveStoryCss(story);
     await archiveHtmlElements();
 
-    await fetchFile(`${mspfaUrl}/images/candyheart.png`, 'archive/assets/candyheart.png');
+    await fetchFile(`${mspfaUrl}/images/candyheart.png`, `${assetsDir}/candyheart.png`);
 
-    await fs.writeFile('archive/story.json', JSON.stringify(story, null, '  '));
+    await fs.writeFile(`${archiveDir}/story.json`, JSON.stringify(story, null, '  '));
 
     console.log('copying static resources');
 
     for (const staticFile of await glob('static/**/*')) {
         await fs.copy(
             staticFile,
-            path.join('archive/', path.relative('static', staticFile)),
+            path.join(archiveDir, path.relative('static', staticFile)),
             { recursive: true }
         );
     }
-    await applyCssScopeToFile('archive/assets/mspfa.css');
+    await applyCssScopeToFile(`${assetsDir}/mspfa.css`);
     await generateIndex();
     await generateTitleFile();
 
-    await fs.copy('build/static/bb.js', 'archive/bb.js');
+    await fs.copy('build/static/bb.js', `${archiveDir}/bb.js`);
 }
 
 ///
@@ -164,8 +199,9 @@ async function generateTitleFile() {
     exports.urlTitle = ${JSON.stringify(story.urlTitle)};
     `;
 
-    if (!await fs.pathExists('archive/title.js')) {
-        await fs.writeFile('archive/title.js', content);
+    const titlePath = `${archiveDir}/title.js`;
+    if (!await fs.pathExists(titlePath)) {
+        await fs.writeFile(titlePath, content);
     } else {
         console.log('title file already exists - will not overwrite')
     }

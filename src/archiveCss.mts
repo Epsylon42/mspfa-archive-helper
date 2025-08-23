@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as csst from 'css-tree';
 import { fs } from 'zx';
 
-import { mspfaUrl, assetsDir, storyId  } from './index.mjs'
+import { mspfaUrl, archiveDir, assetsDir, storyId  } from './index.mjs'
 import { fetchFile, FetchResult, toAssetUrl } from './fetch.mjs'
 
 let cssResIndex = 0;

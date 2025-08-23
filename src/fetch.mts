@@ -1,4 +1,4 @@
-import { argv, assetsDir, story, mspfaUrl, youtubedl } from './index.mjs';
+import { argv, archiveDir, assetsDir, story, mspfaUrl, youtubedl } from './index.mjs';
 
 import * as path from 'path';
 import { createWriteStream } from 'fs';
